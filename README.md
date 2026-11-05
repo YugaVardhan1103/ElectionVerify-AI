@@ -1,4 +1,4 @@
-# ElectionVerify AI 🇮🇳
+# ElectionVerify AI
 
 ### AI-Assisted Election Information Verification Platform
 
