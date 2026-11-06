@@ -1,4 +1,45 @@
+import { useState } from "react";
+
 function SubmitClaim() {
+    const [claim, setClaim] = useState("");
+    const [sourceUrl, setSourceUrl] = useState("");
+    const [language, setLanguage] = useState("English");
+    const [context, setContext] = useState("");
+    const [error, setError] = useState("");
+    const [success, setSuccess] = useState("");
+
+    function handleSubmit(e) {
+        e.preventDefault();
+
+        setError("");
+        setSuccess("");
+
+        if (!claim.trim()) {
+            setError("Please enter a claim statement.");
+            return;
+        }
+
+        setSuccess("Claim submitted successfully!");
+        setClaim("");
+        setSourceUrl("");
+        setLanguage("English");
+        setContext("");
+
+        if (sourceUrl.trim()) {
+            try {
+                const url = new URL(sourceUrl.trim());
+
+                if (url.protocol !== "http:" && url.protocol !== "https:") {
+                setError("Please enter a valid HTTP or HTTPS URL.");
+                return;
+                }
+            } catch {
+                setError("Please enter a valid source URL.");
+                return;
+            }
+        }
+    }
+
   return (
     <main className="min-h-screen bg-background px-6 py-10">
       <div className="mx-auto max-w-3xl">
@@ -11,7 +52,7 @@ function SubmitClaim() {
         </p>
 
         <div className="card mt-8">
-            <form className="space-y-6">
+            <form className="space-y-6" onSubmit={handleSubmit} noValidate>
 
                 {/* Claim Statement */}
                 <div>
@@ -27,6 +68,8 @@ function SubmitClaim() {
                     rows="5"
                     placeholder="Enter the election-related claim you want to verify..."
                     className="w-full resize-y rounded-lg border border-border px-4 py-3 outline-none focus:border-brand-600"
+                    value={claim}
+                    onChange={(e) => setClaim(e.target.value)}
                 />
 
                 <p className="mt-2 text-xs text-text-secondary">
@@ -48,6 +91,8 @@ function SubmitClaim() {
                     type="url"
                     placeholder="https://example.com/article"
                     className="w-full rounded-lg border border-border px-4 py-3 outline-none focus:border-brand-600"
+                    value={sourceUrl}
+                    onChange={(e) => setSourceUrl(e.target.value)}
                 />
 
                 <p className="mt-2 text-xs text-text-secondary">
@@ -68,6 +113,8 @@ function SubmitClaim() {
                         id="language"
                         className="w-full rounded-lg border border-border bg-white px-4 py-3 outline-none focus:border-brand-600"
                         defaultValue="English"
+                        value={language}
+                        onChange={(e) => setLanguage(e.target.value)}
                     >
                         <option value="English">English</option>
                         <option value="Hindi">Hindi</option>
@@ -100,12 +147,28 @@ function SubmitClaim() {
                             rows="4"
                             placeholder="Provide any additional information that might help with verification..."
                             className="w-full resize-y rounded-lg border border-border px-4 py-3 outline-none focus:border-brand-600"
+                            value={context}
+                            onChange={(e) => setContext(e.target.value)}
                         />
 
                         <p className="mt-2 text-xs text-text-secondary">
                             Add relevant background information, dates, or other details.
                         </p>
                         </div>
+
+                    {/* Error Message */}
+                    {error && (
+                    <p className="rounded-lg bg-red-50 p-3 text-sm text-danger">
+                        {error}
+                    </p>
+                    )}
+
+                    {/* Success Message */}
+                    {success && (
+                    <p className="rounded-lg bg-green-50 p-3 text-sm text-success">
+                        {success}
+                    </p>
+                    )}
 
                     {/* Submit Button */}
                     <div className="border-t border-border pt-6">
