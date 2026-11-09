@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import Button from "../components/Button";
 
 function VerificationHistory() {
     const [searchTerm, setSearchTerm] = useState("");
@@ -105,7 +106,7 @@ function VerificationHistory() {
         <select
             value={selectedStatus}
             onChange={(e) => setSelectedStatus(e.target.value)}
-            className="w-full rounded-lg border border-border bg-white px-4 py-3 outline-none focus:border-brand-600 sm:w-64"
+            className="w-full rounded-lg border border-border bg-surface px-4 py-3 text-text-primary outline-none focus:border-brand-600 sm:w-64"
         >
             <option value="All">All Verifications</option>
             <option value="Supported">Supported</option>
@@ -114,16 +115,17 @@ function VerificationHistory() {
         </select>
         </div>
 
-        <button
+        <Button
         type="button"
+        variant="secondary"
         onClick={() => {
             setSearchTerm("");
             setSelectedStatus("All");
         }}
-        className="mt-3 text-sm font-semibold text-brand-600 hover:text-brand-700"
+        className="mt-3 text-sm"
         >
         Clear Filters
-        </button>
+        </Button>
 
         </div>
 
@@ -167,8 +169,8 @@ function VerificationHistory() {
                     </div>
                 ))
                 ) : (
-                <p className="rounded-lg border border-border bg-white p-6 text-center text-sm text-text-secondary">
-                    No matching verification records found.
+                <p className="rounded-lg border border-border bg-surface p-6 text-center text-sm text-text-secondary">
+                No matching verification records found.
                 </p>
                 )}
 

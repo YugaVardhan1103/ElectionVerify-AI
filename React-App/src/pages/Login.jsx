@@ -1,6 +1,8 @@
 
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import Button from "../components/Button";
+import FormInput from "../components/FormInput";
 
 function Login() {
   const [showPassword, setShowPassword] = useState(false);
@@ -49,20 +51,14 @@ function Login() {
           >
 
             <div>
-              <label
-                htmlFor="email"
-                className="mb-2 block text-sm font-medium"
-              >
-                Email Address
-              </label>
-
-              <input
-                id="email"
+              <FormInput
+                label="Email Address"
                 type="email"
-                placeholder="Enter your email"
-                className="w-full rounded-lg border border-border px-4 py-3 outline-none focus:border-brand-600"
+                name="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                placeholder="Enter your email"
+                required
               />
             </div>
 
@@ -116,12 +112,12 @@ function Login() {
               </p>
             )}
 
-            <button
+            <Button
               type="submit"
-              className="btn-primary w-full"
+              className="w-full"
             >
               Login
-            </button>
+            </Button>
 
           </form>
 

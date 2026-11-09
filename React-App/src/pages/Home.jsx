@@ -56,7 +56,7 @@ function Home() {
       {/* How It Works Section */}
       <section
         id="how-it-works"
-        className="border-t border-border bg-white px-6 py-20"
+        className="border-t border-border bg-surface px-6 py-20"
       >
         <div className="mx-auto max-w-7xl">
 
@@ -214,7 +214,7 @@ function Home() {
 
 
       {/* Trust and Transparency Section */}
-      <section className="border-t border-border bg-white px-6 py-20">
+      <section className="border-t border-border bg-surface px-6 py-20">
         <div className="mx-auto grid max-w-7xl items-center gap-12 md:grid-cols-2">
 
           <div>

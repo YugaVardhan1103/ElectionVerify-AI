@@ -1,5 +1,6 @@
 
 @import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
   /* Brand colors */
@@ -31,6 +32,7 @@
     margin: 0;
     background-color: var(--color-background);
     color: var(--color-text-primary);
+    transition: background-color 0.3s ease, color 0.3s ease;
   }
 
   button,
@@ -38,6 +40,14 @@
   textarea,
   select {
     font: inherit;
+  }
+
+  .dark body {
+    --color-background: #0f172a;
+    --color-surface: #1e293b;
+    --color-text-primary: #f8fafc;
+    --color-text-secondary: #cbd5e1;
+    --color-border: #334155;
   }
 }
 
@@ -48,7 +58,7 @@
   }
 
   .btn-secondary {
-    @apply rounded-lg border border-border bg-white px-5 py-2.5 font-semibold text-text-primary transition-colors hover:bg-slate-50;
+    @apply rounded-lg border border-border bg-surface px-5 py-2.5 font-semibold text-text-primary transition-colors hover:bg-slate-100 dark:hover:bg-slate-700;
   }
 }
 

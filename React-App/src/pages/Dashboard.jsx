@@ -1,4 +1,8 @@
+import Button from "../components/Button";
+import { useNavigate } from "react-router-dom";
+
 function Dashboard() {
+  const navigate = useNavigate();
   return (
     <main className="min-h-screen bg-background px-6 py-10">
       <div className="mx-auto max-w-7xl">
@@ -73,12 +77,12 @@ function Dashboard() {
                 </p>
               </div>
 
-              <button
-                type="button"
-                className="btn-primary whitespace-nowrap"
+              <Button
+                onClick={() => navigate("/submit-claim")}
+                className="whitespace-nowrap"
               >
                 + Verify a Claim
-              </button>
+              </Button>
             </div>
 
           {/* Recent Activity */}

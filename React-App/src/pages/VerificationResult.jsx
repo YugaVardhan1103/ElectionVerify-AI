@@ -1,3 +1,5 @@
+import Card from "../components/Card";
+
 function VerificationResult() {
   return (
     <main className="min-h-screen bg-background px-6 py-10">
@@ -11,7 +13,7 @@ function VerificationResult() {
         </p>
 
         {/* Verdict Card */}
-        <div className="card mt-8">
+        <Card className="mt-8">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
 
             <div>
@@ -34,10 +36,10 @@ function VerificationResult() {
             </span>
 
         </div>
-        </div>
+        </Card>
 
         {/* Confidence Indicator */}
-        <div className="card mt-6">
+        <Card className="mt-6">
         <div className="flex items-center justify-between">
             <h2 className="text-lg font-bold">
             Evidence Confidence
@@ -56,10 +58,10 @@ function VerificationResult() {
             The assessment has moderate confidence based on the
             available supporting and contradicting evidence.
         </p>
-        </div>
+        </Card>
 
         {/* Claim Summary */}
-        <div className="card mt-6">
+        <Card className="mt-6">
         <h2 className="text-lg font-bold">
             Claim Summary
         </h2>
@@ -78,10 +80,10 @@ function VerificationResult() {
             Voting Schedule
             </span>
         </div>
-        </div>
+        </Card>
 
         {/* Supporting Evidence */}
-        <div className="card mt-6">
+        <Card className="mt-6">
         <div className="flex items-center gap-2">
             <div className="h-3 w-3 rounded-full bg-success"></div>
             <h2 className="text-lg font-bold">
@@ -103,10 +105,10 @@ function VerificationResult() {
             Evidence supports part of the claim.
             </p>
         </div>
-        </div>
+        </Card>
 
         {/* Contradicting Evidence */}
-        <div className="card mt-6">
+        <Card className="mt-6">
         <div className="flex items-center gap-2">
             <div className="h-3 w-3 rounded-full bg-danger"></div>
             <h2 className="text-lg font-bold">
@@ -129,10 +131,10 @@ function VerificationResult() {
             Evidence challenges part of the claim.
             </p>
         </div>
-        </div>
+        </Card>
 
         {/* AI Explanation */}
-        <div className="card mt-6">
+        <Card className="mt-6">
         <div className="flex items-center gap-2">
             <h2 className="text-lg font-bold">
             AI Analysis & Explanation
@@ -150,21 +152,21 @@ function VerificationResult() {
             before reaching a definitive conclusion.
         </p>
 
-        <div className="mt-5 rounded-lg bg-amber-50 p-4">
-            <p className="text-sm font-semibold text-amber-800">
+        <div className="mt-5 rounded-lg bg-amber-50 p-4 dark:bg-amber-900/40">
+            <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">
             Important Notice
             </p>
 
-            <p className="mt-2 text-sm leading-6 text-amber-700">
+            <p className="mt-2 text-sm leading-6 text-amber-700 dark:text-amber-200">
             AI-generated analysis may contain limitations.
             Always review the original sources and consider
             human expert verification.
             </p>
         </div>
-        </div>
+        </Card>
 
         {/* Source References */}
-        <div className="card mt-6">
+        <Card className="mt-6">
         <h2 className="text-lg font-bold">
             Source References
         </h2>
@@ -202,10 +204,10 @@ function VerificationResult() {
             </p>
             </div>
         </div>
-        </div>
+        </Card>
 
         {/* Verification Details */}
-        <div className="card mt-6">
+        <Card className="mt-6">
         <h2 className="text-lg font-bold">
             Verification Details
         </h2>
@@ -249,7 +251,7 @@ function VerificationResult() {
             </div>
 
         </div>
-        </div>
+        </Card>
 
       </div>
     </main>

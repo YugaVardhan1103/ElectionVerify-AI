@@ -8,6 +8,9 @@ import Dashboard from "./pages/Dashboard";
 import SubmitClaim from "./pages/SubmitClaim";
 import VerificationResult from "./pages/VerificationResult";
 import VerificationHistory from "./pages/VerificationHistory";
+import Profile from "./pages/Profile";
+import ForgotPassword from "./pages/ForgotPassword";
+import NotFound from "./pages/NotFound";
 
 function App() {
   return (
@@ -27,6 +30,9 @@ function App() {
           path="/verification-history"
           element={<VerificationHistory />}
         />
+        <Route path="/profile" element={<Profile />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>
   );

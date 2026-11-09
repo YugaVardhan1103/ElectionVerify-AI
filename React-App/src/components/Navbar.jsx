@@ -1,6 +1,13 @@
-import { Link } from "react-router-dom";
+import { NavLink, Link } from "react-router-dom";
 
 function Navbar() {
+  const getLinkClass = ({ isActive }) =>
+    `transition-colors ${
+      isActive
+        ? "font-semibold text-blue-400"
+        : "text-slate-300 hover:text-white"
+    }`;
+
   return (
     <nav className="flex items-center justify-between bg-slate-900 px-8 py-4 text-white">
 
@@ -9,9 +16,17 @@ function Navbar() {
       </Link>
 
       <div className="flex items-center gap-6">
-        <Link to="/">Home</Link>
-        <Link to="/login">Login</Link>
-        <Link to="/signup">Sign Up</Link>
+        <NavLink to="/" className={getLinkClass}>
+          Home
+        </NavLink>
+
+        <NavLink to="/login" className={getLinkClass}>
+          Login
+        </NavLink>
+
+        <NavLink to="/signup" className={getLinkClass}>
+          Sign Up
+        </NavLink>
       </div>
 
     </nav>

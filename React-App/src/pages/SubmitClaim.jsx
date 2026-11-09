@@ -1,4 +1,5 @@
 import { useState } from "react";
+import Button from "../components/Button";
 
 function SubmitClaim() {
     const [claim, setClaim] = useState("");
@@ -14,30 +15,37 @@ function SubmitClaim() {
         setError("");
         setSuccess("");
 
+        // Validate claim statement
         if (!claim.trim()) {
             setError("Please enter a claim statement.");
             return;
         }
 
+        // Validate source URL
+        if (sourceUrl.trim()) {
+            try {
+            const url = new URL(sourceUrl.trim());
+
+            if (
+                url.protocol !== "http:" &&
+                url.protocol !== "https:"
+            ) {
+                setError("Please enter a valid HTTP or HTTPS URL.");
+                return;
+            }
+            } catch {
+            setError("Please enter a valid source URL.");
+            return;
+            }
+        }
+
+        // Success: only reached if all validations pass
         setSuccess("Claim submitted successfully!");
+
         setClaim("");
         setSourceUrl("");
         setLanguage("English");
         setContext("");
-
-        if (sourceUrl.trim()) {
-            try {
-                const url = new URL(sourceUrl.trim());
-
-                if (url.protocol !== "http:" && url.protocol !== "https:") {
-                setError("Please enter a valid HTTP or HTTPS URL.");
-                return;
-                }
-            } catch {
-                setError("Please enter a valid source URL.");
-                return;
-            }
-        }
     }
 
   return (
@@ -111,8 +119,7 @@ function SubmitClaim() {
 
                     <select
                         id="language"
-                        className="w-full rounded-lg border border-border bg-white px-4 py-3 outline-none focus:border-brand-600"
-                        defaultValue="English"
+                        className="w-full rounded-lg border border-border bg-surface px-4 py-3 text-text-primary outline-none focus:border-brand-600"
                         value={language}
                         onChange={(e) => setLanguage(e.target.value)}
                     >
@@ -172,12 +179,12 @@ function SubmitClaim() {
 
                     {/* Submit Button */}
                     <div className="border-t border-border pt-6">
-                    <button
-                        type="submit"
-                        className="btn-primary w-full sm:w-auto"
+                    <Button
+                    type="submit"
+                    className="w-full"
                     >
-                        Submit for Verification
-                    </button>
+                    Submit for Verification
+                    </Button>
 
                     <p className="mt-3 text-xs text-text-secondary">
                         Your claim will be submitted for AI-assisted analysis.
