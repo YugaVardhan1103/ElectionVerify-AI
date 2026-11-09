@@ -7,6 +7,7 @@ import Signup from "./pages/Signup";
 import Dashboard from "./pages/Dashboard";
 import SubmitClaim from "./pages/SubmitClaim";
 import VerificationResult from "./pages/VerificationResult";
+import VerificationHistory from "./pages/VerificationHistory";
 
 function App() {
   return (
@@ -21,6 +22,10 @@ function App() {
         <Route
           path="/verification-result"
           element={<VerificationResult />}
+        />
+        <Route
+          path="/verification-history"
+          element={<VerificationHistory />}
         />
       </Routes>
     </BrowserRouter>
