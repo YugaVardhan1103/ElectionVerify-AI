@@ -307,9 +307,9 @@ function Home() {
 
             <ul className="mt-4 space-y-3 text-sm">
               <li>
-                <a href="/" className="hover:text-white">
+                <Link to="/" className="hover:text-white">
                   Home
-                </a>
+                </Link>
               </li>
 
               <li>
@@ -319,15 +319,15 @@ function Home() {
               </li>
 
               <li>
-                <a href="/login" className="hover:text-white">
+                <Link to="/login" className="hover:text-white">
                   Login
-                </a>
+                </Link>
               </li>
 
               <li>
-                <a href="/signup" className="hover:text-white">
+                <Link to="/signup" className="hover:text-white">
                   Sign Up
-                </a>
+                </Link>
               </li>
             </ul>
           </div>

@@ -1,0 +1,27 @@
+# Dependencies
+node_modules/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Environment files and credentials
+.env
+.env.local
+.env.test.local
+.env.production.local
+credentials.json
+*.pem
+*.key
+# Ignore all environment files
+.env*
+!.env.example
+
+# Preserve example config
+!.env.example
+
+# OS & Editor
+.DS_Store
+.vscode/
+.idea/

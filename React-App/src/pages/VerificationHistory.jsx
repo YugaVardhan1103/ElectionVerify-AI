@@ -1,185 +1,350 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import Button from "../components/Button";
+import Card from "../components/Card";
+import StatusBadge from "../components/StatusBadge";
+import OfflineNotice from "../components/OfflineNotice";
+import { getClaims, getClaimStats } from "../services/claimService.js";
+import { VERDICT_LIST, getVerdictById } from "../constants/verdicts.js";
 
+/**
+ * ElectionVerify AI - Verification History Page
+ *
+ * Displays a searchable, filterable log of past claim submissions and records.
+ * Integrates directly with the Shared-Backend API with seamless offline fallback.
+ */
 function VerificationHistory() {
-    const [searchTerm, setSearchTerm] = useState("");
-    const [selectedStatus, setSelectedStatus] = useState("All");
-    const records = [
-    {
-        id: 1,
-        title: "Voter registration deadline claim",
-        date: "Submitted recently",
-        status: "Supported",
-    },
-    {
-        id: 2,
-        title: "Election voting date announcement",
-        date: "Submitted 2 days ago",
-        status: "Partially Supported",
-    },
-    {
-        id: 3,
-        title: "Voting machine-related claim",
-        date: "Submitted 4 days ago",
-        status: "Contradicted",
-    },
-    ];
-    const filteredRecords = records.filter((record) => {
-    const matchesSearch = record.title
-        .toLowerCase()
-        .includes(searchTerm.toLowerCase());
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedStatus, setSelectedStatus] = useState("ALL");
+  const [selectedVerdict, setSelectedVerdict] = useState("ALL");
+  const [page, setPage] = useState(1);
 
-    const matchesStatus =
-        selectedStatus === "All" ||
-        record.status === selectedStatus;
+  const [claims, setClaims] = useState([]);
+  const [pagination, setPagination] = useState({
+    total: 0,
+    page: 1,
+    limit: 10,
+    totalPages: 1,
+  });
+  const [stats, setStats] = useState(null);
+  const [isOffline, setIsOffline] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
-    return matchesSearch && matchesStatus;
+  const fetchHistory = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const [res, statsData] = await Promise.all([
+        getClaims({
+          page,
+          limit: 10,
+          searchTerm,
+          status: selectedStatus,
+          verdictId: selectedVerdict,
+        }),
+        getClaimStats(),
+      ]);
+
+      setClaims(res.claims || []);
+      setPagination(
+        res.pagination || { total: 0, page: 1, limit: 10, totalPages: 1 }
+      );
+      setStats(statsData);
+      if (res.isOffline) {
+        setIsOffline(true);
+      }
+    } catch (err) {
+      console.error("Failed to load claims history:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [page, searchTerm, selectedStatus, selectedVerdict]);
+
+  useEffect(() => {
+    fetchHistory();
+  }, [fetchHistory]);
+
+  function formatDate(isoString) {
+    if (!isoString) return "Recent";
+    const date = new Date(isoString);
+    if (Number.isNaN(date.getTime())) return "Recent";
+    return date.toLocaleDateString(undefined, {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
     });
+  }
+
+  function handleClearFilters() {
+    setSearchTerm("");
+    setSelectedStatus("ALL");
+    setSelectedVerdict("ALL");
+    setPage(1);
+  }
+
+  const hasActiveFilters =
+    searchTerm.trim() !== "" ||
+    selectedStatus !== "ALL" ||
+    selectedVerdict !== "ALL";
+
   return (
     <main className="min-h-screen bg-background px-6 py-10">
       <div className="mx-auto max-w-7xl">
-        <h1 className="text-3xl font-bold">
-          Verification History
-        </h1>
-
+        <h1 className="text-3xl font-bold">Verification History</h1>
         <p className="mt-2 text-text-secondary">
-          Track and review your previous claim submissions.
+          Track and inspect past claim submissions, review statuses, and verified records.
         </p>
+
+        {/* Offline Demo Notice if server is unreachable */}
+        {isOffline ? (
+          <div className="mt-6">
+            <OfflineNotice message="Backend server is unreachable. Displaying baseline demonstration fixtures and local session submissions." />
+          </div>
+        ) : (
+          <div className="mt-6 rounded-lg border border-emerald-200 bg-emerald-50/70 p-3.5 text-xs text-emerald-900 dark:border-emerald-800/60 dark:bg-emerald-950/40 dark:text-emerald-300">
+            <span className="font-semibold">Live Mode:</span> Connected to Shared-Backend API for historical verification records.
+          </div>
+        )}
 
         {/* History Statistics */}
-        <div className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        {stats && (
+          <div className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-3">
+            <Card>
+              <p className="text-sm font-medium text-text-secondary">
+                Total Tracked Claims
+              </p>
+              <h2 className="mt-3 text-3xl font-bold">{stats.totalClaims}</h2>
+              <p className="mt-2 text-sm text-text-secondary">
+                All platform submissions
+              </p>
+            </Card>
 
-        <div className="card">
-            <p className="text-sm font-medium text-text-secondary">
-            Total Verifications
-            </p>
-            <h2 className="mt-3 text-3xl font-bold">24</h2>
-            <p className="mt-2 text-sm text-text-secondary">
-            All submitted claims
-            </p>
+            <Card>
+              <p className="text-sm font-medium text-text-secondary">
+                Completed Reports
+              </p>
+              <h2 className="mt-3 text-3xl font-bold text-emerald-600 dark:text-emerald-400">
+                {stats.completedVerifications}
+              </h2>
+              <p className="mt-2 text-sm text-text-secondary">
+                Verification reports available
+              </p>
+            </Card>
+
+            <Card>
+              <p className="text-sm font-medium text-text-secondary">
+                Under Review
+              </p>
+              <h2 className="mt-3 text-3xl font-bold text-amber-600 dark:text-amber-400">
+                {stats.underReview}
+              </h2>
+              <p className="mt-2 text-sm text-text-secondary">
+                Pending review pipeline
+              </p>
+            </Card>
+          </div>
+        )}
+
+        {/* Search & Filters Bar */}
+        <div className="mt-10 card">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            {/* Search Input */}
+            <div className="flex-1">
+              <label htmlFor="search-claims" className="sr-only">
+                Search claims
+              </label>
+              <input
+                id="search-claims"
+                type="text"
+                placeholder="Search by keywords in title or claim statement..."
+                value={searchTerm}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setPage(1);
+                }}
+                className="w-full rounded-lg border border-border bg-surface px-4 py-2.5 text-sm text-text-primary outline-none transition-colors focus:border-brand-600 focus:ring-2 focus:ring-brand-500/20"
+              />
+            </div>
+
+            {/* Filter Dropdowns */}
+            <div className="flex flex-wrap gap-3">
+              {/* Status Filter */}
+              <div>
+                <label htmlFor="status-filter" className="sr-only">
+                  Filter by status
+                </label>
+                <select
+                  id="status-filter"
+                  value={selectedStatus}
+                  onChange={(e) => {
+                    setSelectedStatus(e.target.value);
+                    setPage(1);
+                  }}
+                  className="rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-text-primary outline-none focus:border-brand-600 focus:ring-2 focus:ring-brand-500/20"
+                >
+                  <option value="ALL">All Statuses</option>
+                  <option value="COMPLETED">Completed</option>
+                  <option value="UNDER_REVIEW">Under Review</option>
+                  <option value="IN_VERIFICATION">In Verification</option>
+                  <option value="REJECTED">Rejected</option>
+                </select>
+              </div>
+
+              {/* Verdict Filter */}
+              <div>
+                <label htmlFor="verdict-filter" className="sr-only">
+                  Filter by verdict
+                </label>
+                <select
+                  id="verdict-filter"
+                  value={selectedVerdict}
+                  onChange={(e) => {
+                    setSelectedVerdict(e.target.value);
+                    setPage(1);
+                  }}
+                  className="rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-text-primary outline-none focus:border-brand-600 focus:ring-2 focus:ring-brand-500/20"
+                >
+                  <option value="ALL">All Verdicts</option>
+                  {VERDICT_LIST.map((v) => (
+                    <option key={v.id} value={v.id}>
+                      {v.shortLabel}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {hasActiveFilters && (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={handleClearFilters}
+                >
+                  Clear Filters
+                </Button>
+              )}
+            </div>
+          </div>
         </div>
 
-        <div className="card">
-            <p className="text-sm font-medium text-text-secondary">
-            Completed
-            </p>
-            <h2 className="mt-3 text-3xl font-bold text-success">19</h2>
-            <p className="mt-2 text-sm text-text-secondary">
-            Verification reports available
-            </p>
-        </div>
+        {/* Claim Records List */}
+        <div className="mt-6 space-y-4">
+          {isLoading ? (
+            <div className="flex min-h-[30vh] items-center justify-center">
+              <div className="h-8 w-8 animate-spin rounded-full border-4 border-brand-600 border-t-transparent" />
+            </div>
+          ) : claims.length > 0 ? (
+            claims.map((record) => {
+              const verdict = record.verdictId
+                ? getVerdictById(record.verdictId)
+                : null;
+              const isUnderReview =
+                record.status === "UNDER_REVIEW" ||
+                record.status === "IN_VERIFICATION";
 
-        <div className="card">
-            <p className="text-sm font-medium text-text-secondary">
-            Under Review
-            </p>
-            <h2 className="mt-3 text-3xl font-bold text-warning">5</h2>
-            <p className="mt-2 text-sm text-text-secondary">
-            Awaiting further review
-            </p>
-        </div>
-
-        </div>
-
-        {/* Verification Records */}
-        <div className="mt-10">
-        <h2 className="text-xl font-bold">
-            Your Verification Records
-        </h2>
-
-        <p className="mt-2 text-sm text-text-secondary">
-            A list of your recently submitted claims.
-        </p>
-
-        <div className="mt-5">
-        <input
-            type="text"
-            placeholder="Search your claims..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full rounded-lg border border-border px-4 py-3 outline-none focus:border-brand-600"
-        />
-
-        {/* Status Filter */}
-        <div className="mt-4">
-        <select
-            value={selectedStatus}
-            onChange={(e) => setSelectedStatus(e.target.value)}
-            className="w-full rounded-lg border border-border bg-surface px-4 py-3 text-text-primary outline-none focus:border-brand-600 sm:w-64"
-        >
-            <option value="All">All Verifications</option>
-            <option value="Supported">Supported</option>
-            <option value="Contradicted">Contradicted</option>
-            <option value="Partially Supported">Partially Supported</option>
-        </select>
-        </div>
-
-        <Button
-        type="button"
-        variant="secondary"
-        onClick={() => {
-            setSearchTerm("");
-            setSelectedStatus("All");
-        }}
-        className="mt-3 text-sm"
-        >
-        Clear Filters
-        </Button>
-
-        </div>
-
-        <div className="mt-5 space-y-4">
-
-            {filteredRecords.length > 0 ? (
-                filteredRecords.map((record) => (
-                    <div className="card" key={record.id}>
-                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-
-                        <div>
-                        <h3 className="font-semibold">
-                            {record.title}
-                        </h3>
-
-                        <p className="mt-2 text-sm text-text-secondary">
-                            {record.date}
-                        </p>
-
+              return (
+                <Card key={record.id} hoverable className="transition-all">
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="space-y-1.5">
+                      <div className="flex flex-wrap items-center gap-2">
                         <Link
-                        to="/verification-result"
-                        className="mt-3 inline-block text-sm font-semibold text-brand-600 hover:text-brand-700"
+                          to={`/verification-result/${record.id}`}
+                          className="font-semibold text-text-primary hover:text-brand-600 dark:hover:text-brand-400"
                         >
-                        View Results →
+                          {record.title}
                         </Link>
-                        </div>
+                        {record.isSampleData && (
+                          <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-400">
+                            Demo
+                          </span>
+                        )}
+                      </div>
 
+                      <p className="line-clamp-2 text-xs text-text-secondary">
+                        {record.claimText}
+                      </p>
+
+                      <div className="flex flex-wrap items-center gap-4 text-xs text-text-secondary">
+                        <span>Submitted {formatDate(record.submittedDate)}</span>
+                        <span>Language: {record.language}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3 self-start sm:self-center">
+                      {isUnderReview ? (
+                        <StatusBadge status={record.status} />
+                      ) : verdict ? (
                         <span
-                        className={`w-fit rounded-full px-3 py-1 text-sm font-medium ${
-                            record.status === "Supported"
-                            ? "bg-green-100 text-green-700"
-                            : record.status === "Contradicted"
-                            ? "bg-red-100 text-red-700"
-                            : "bg-amber-100 text-amber-700"
-                        }`}
+                          className={`w-fit whitespace-nowrap rounded-full px-3 py-1 text-xs font-semibold ${verdict.badgeClass}`}
                         >
-                        {record.status}
+                          {verdict.shortLabel}
                         </span>
+                      ) : (
+                        <StatusBadge status={record.status || "COMPLETED"} />
+                      )}
 
+                      <Link
+                        to={`/verification-result/${record.id}`}
+                        className="whitespace-nowrap text-xs font-semibold text-brand-600 hover:text-brand-700 dark:text-brand-400"
+                      >
+                        View Results &rarr;
+                      </Link>
                     </div>
-                    </div>
-                ))
-                ) : (
-                <p className="rounded-lg border border-border bg-surface p-6 text-center text-sm text-text-secondary">
-                No matching verification records found.
-                </p>
-                )}
-
+                  </div>
+                </Card>
+              );
+            })
+          ) : (
+            <div className="rounded-xl border border-border bg-surface p-12 text-center">
+              <p className="text-base font-medium text-text-primary">
+                No matching verification records found
+              </p>
+              <p className="mt-1 text-sm text-text-secondary">
+                Try modifying your search term or filter criteria.
+              </p>
+              {hasActiveFilters && (
+                <div className="mt-4">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleClearFilters}
+                  >
+                    Reset All Filters
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
-        </div>
 
+        {/* Pagination Controls */}
+        {pagination.totalPages > 1 && (
+          <div className="mt-8 flex items-center justify-between border-t border-border pt-4">
+            <p className="text-xs text-text-secondary">
+              Page {pagination.page} of {pagination.totalPages} ({pagination.total} claims total)
+            </p>
+            <div className="flex gap-2">
+              <Button
+                variant="secondary"
+                size="sm"
+                disabled={page <= 1}
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+              >
+                Previous
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                disabled={page >= pagination.totalPages}
+                onClick={() => setPage((p) => p + 1)}
+              >
+                Next
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
     </main>
   );
 }
 
-export default VerificationHistory; 
+export default VerificationHistory;

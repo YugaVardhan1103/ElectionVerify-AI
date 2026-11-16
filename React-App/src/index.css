@@ -42,6 +42,11 @@
     font: inherit;
   }
 
+  :focus-visible {
+    outline: 2px solid var(--color-brand-500);
+    outline-offset: 2px;
+  }
+
   .dark body {
     --color-background: #0f172a;
     --color-surface: #1e293b;

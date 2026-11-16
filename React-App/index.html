@@ -4,7 +4,32 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>react-app</title>
+    <title>ElectionVerify AI — AI-Assisted Election Information Verification</title>
+    <!-- Prevent initial theme flash (FOUC) before React mounts -->
+    <script>
+      (function () {
+        try {
+          var saved = localStorage.getItem("themePreference");
+          if (saved) {
+            saved =
+              saved.trim().charAt(0).toUpperCase() +
+              saved.trim().slice(1).toLowerCase();
+          }
+          if (saved !== "Light" && saved !== "Dark" && saved !== "System") {
+            saved = "System";
+          }
+          var isDark =
+            saved === "Dark" ||
+            (saved === "System" &&
+              window.matchMedia("(prefers-color-scheme: dark)").matches);
+          if (isDark) {
+            document.documentElement.classList.add("dark");
+          } else {
+            document.documentElement.classList.remove("dark");
+          }
+        } catch (e) {}
+      })();
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">

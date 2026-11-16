@@ -1,92 +1,90 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import FormInput from "../components/FormInput";
+import Button from "../components/Button";
+import { validateEmail } from "../utils/validators.js";
 
+/**
+ * ElectionVerify AI - Forgot Password Page
+ *
+ * Provides a clean client-side interface with clear demonstration notices
+ * explaining that reset emails are not dispatched in demo mode.
+ */
 function ForgotPassword() {
-    const [email, setEmail] = useState("");
-    const [error, setError] = useState("");
-    const [success, setSuccess] = useState("");
+  const [email, setEmail] = useState("");
+  const [error, setError] = useState("");
+  const [demoNotice, setDemoNotice] = useState("");
 
-    function handleSubmit(e) {
+  function handleSubmit(e) {
     e.preventDefault();
-
     setError("");
-    setSuccess("");
+    setDemoNotice("");
 
-    if (!email.trim()) {
-        setError("Please enter your email address.");
-        return;
+    const emailVal = validateEmail(email);
+    if (!emailVal.isValid) {
+      setError(emailVal.error);
+      return;
     }
 
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
-        setError("Please enter a valid email address.");
-        return;
-    }
-
-    setSuccess("If an account exists with this email, password reset instructions will be sent.");
-    setEmail("");
-    }
+    // Explicitly clarify demo mode rather than claiming an email was sent
+    setDemoNotice(
+      "Demo Mode: In a production environment, password reset instructions would be delivered to this address. In this client demo, account recovery is not connected."
+    );
+  }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-background px-6 py-12">
-      <div className="w-full max-w-md rounded-xl border border-border bg-surface p-8 shadow-sm">
+    <main className="flex min-h-[85vh] items-center justify-center px-6 py-12">
+      <div className="w-full max-w-md">
+        <div className="card">
+          <h1 className="text-2xl font-bold text-text-primary">
+            Forgot Password?
+          </h1>
 
-        <h1 className="text-2xl font-bold text-text-primary">
-          Forgot Password?
-        </h1>
+          <p className="mt-3 text-sm text-text-secondary">
+            Enter your email address to review simulated account recovery.
+          </p>
 
-        <p className="mt-3 text-sm text-text-secondary">
-          Enter your registered email address and we'll help you reset your password.
-        </p>
+          <form className="mt-6 space-y-5" onSubmit={handleSubmit} noValidate>
+            <div>
+              <FormInput
+                label="Email Address"
+                type="email"
+                name="email"
+                value={email}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  if (error) setError("");
+                  if (demoNotice) setDemoNotice("");
+                }}
+                placeholder="your.email@example.com"
+                error={error}
+                required
+              />
+            </div>
 
-        <form
-        className="mt-8 space-y-5"
-        onSubmit={handleSubmit}
-        noValidate
-        >
+            {demoNotice && (
+              <div
+                role="status"
+                className="rounded-lg border border-blue-200 bg-blue-50/70 p-3.5 text-xs text-blue-900 dark:border-blue-800/60 dark:bg-blue-950/40 dark:text-blue-300"
+              >
+                {demoNotice}
+              </div>
+            )}
 
-          <div>
-            <FormInput
-              label="Email Address"
-              type="email"
-              name="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="Enter your email"
-              required
-            />
+            <Button type="submit" className="w-full">
+              Send Reset Request
+            </Button>
+          </form>
+
+          <div className="mt-6 text-center">
+            <Link
+              to="/login"
+              className="text-sm font-semibold text-brand-600 hover:text-brand-700 dark:text-brand-400"
+            >
+              &larr; Back to Login
+            </Link>
           </div>
-
-          {error && (
-            <p className="text-sm text-red-600">
-                {error}
-            </p>
-            )}
-
-            {success && (
-            <p className="text-sm text-green-600">
-                {success}
-            </p>
-            )}
-
-          <button
-            type="submit"
-            className="btn-primary w-full"
-          >
-            Send Reset Link
-          </button>
-
-        </form>
-
-        <div className="mt-6 text-center">
-          <Link
-            to="/login"
-            className="text-sm font-semibold text-brand-600 hover:text-brand-700"
-          >
-            ← Back to Login
-          </Link>
         </div>
-
       </div>
     </main>
   );

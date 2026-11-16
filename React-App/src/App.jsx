@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Navbar from "./components/Navbar";
+import ProtectedRoute from "./components/ProtectedRoute";
 
 import Home from "./pages/Home";
 import Login from "./pages/Login";
@@ -20,18 +21,59 @@ function App() {
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/submit-claim" element={<SubmitClaim />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+
+        {/* Protected Application Routes */}
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/submit-claim"
+          element={
+            <ProtectedRoute>
+              <SubmitClaim />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/verification-result/:id"
+          element={
+            <ProtectedRoute>
+              <VerificationResult />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="/verification-result"
-          element={<VerificationResult />}
+          element={
+            <ProtectedRoute>
+              <VerificationResult />
+            </ProtectedRoute>
+          }
         />
         <Route
           path="/verification-history"
-          element={<VerificationHistory />}
+          element={
+            <ProtectedRoute>
+              <VerificationHistory />
+            </ProtectedRoute>
+          }
         />
-        <Route path="/profile" element={<Profile />} />
-        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute>
+              <Profile />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Fallback 404 Route */}
         <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>
