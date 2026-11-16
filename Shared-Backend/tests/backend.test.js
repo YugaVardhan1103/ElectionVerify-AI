@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import http from "node:http";
 
+import { disconnectDB } from "../src/config/db.js";
 import app from "../src/app.js";
 
 import {
@@ -336,7 +337,19 @@ describe("4. Express App & Routing", () => {
     );
   });
 
-  it("should close test HTTP server", async () => {
-    await new Promise((resolve) => server.close(resolve));
-  });
+  it("should close test HTTP server and MongoDB connection", async () => {
+      await new Promise((resolve, reject) => {
+        server.close((error) => {
+          if (error) {
+            reject(error);
+          } else {
+            resolve();
+          }
+        });
+
+        server.closeAllConnections();
+      });
+
+      await disconnectDB();
+    });
 });

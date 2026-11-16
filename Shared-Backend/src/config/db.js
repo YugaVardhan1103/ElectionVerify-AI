@@ -1,36 +1,51 @@
+
 import mongoose from "mongoose";
 import { env } from "./environment.js";
 
-/**
- * Connect to MongoDB instance using Mongoose.
- *
- * @returns {Promise<typeof mongoose>}
- */
+let connectionPromise = null;
+
 export async function connectDB() {
-  try {
-    const conn = await mongoose.connect(env.MONGODB_URI);
-    console.log(`[Database] MongoDB Connected: ${conn.connection.host}/${conn.connection.name}`);
-    return conn;
-  } catch (error) {
-    console.error(`[Database Error] Failed to connect to MongoDB: ${error.message}`);
-    // If in test or development without MongoDB running, provide clear advice
-    if (env.NODE_ENV === "development") {
-      console.warn(
-        "[Database Warning] Make sure MongoDB is running locally or specify a valid MONGODB_URI in your .env file."
-      );
-    }
-    throw error;
+  if (mongoose.connection.readyState === 1) {
+    return mongoose;
   }
+
+  if (connectionPromise) {
+    return connectionPromise;
+  }
+
+  connectionPromise = mongoose
+    .connect(env.MONGODB_URI, {
+      serverSelectionTimeoutMS: 10000,
+    })
+    .then(() => {
+      console.log(
+        `[Database] MongoDB Connected: ${mongoose.connection.host}/${mongoose.connection.name}`
+      );
+
+      return mongoose;
+    })
+    .catch((error) => {
+      console.error(
+        `[Database Error] MongoDB connection failed: ${error.message}`
+      );
+
+      throw error;
+    })
+    .finally(() => {
+      connectionPromise = null;
+    });
+
+  return connectionPromise;
 }
 
-/**
- * Disconnect from MongoDB instance.
- */
 export async function disconnectDB() {
   try {
     await mongoose.disconnect();
+    connectionPromise = null;
     console.log("[Database] MongoDB Disconnected.");
   } catch (error) {
-    console.error(`[Database Error] Disconnection failed: ${error.message}`);
+    console.error(
+      `[Database Error] Disconnection failed: ${error.message}`
+    );
   }
 }
