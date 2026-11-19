@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OAuth Authentication</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: #f0f2f5;
+      color: #1f2937;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    /* Browser Mock URL Bar */
+    .mock-browser-bar {
+      background: #e5e7eb;
+      border-bottom: 1px solid #d1d5db;
+      padding: 6px 12px;
+      font-size: 11px;
+      color: #4b5563;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .ssl-lock {
+      color: #059669;
+      display: inline-flex;
+    }
+    .url-text {
+      background: #ffffff;
+      padding: 2px 8px;
+      border-radius: 4px;
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      border: 1px solid #cbd5e1;
+    }
+    .auth-container {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px 16px;
+    }
+    .auth-card {
+      background: #ffffff;
+      width: 100%;
+      max-width: 440px;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+      border: 1px solid #e2e8f0;
+      overflow: hidden;
+    }
+
+    /* Google Theming */
+    .google-card {
+      padding: 32px 28px;
+    }
+    .google-header {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+    .google-title {
+      font-size: 22px;
+      font-weight: 500;
+      color: #202124;
+      margin-top: 12px;
+    }
+    .google-subtitle {
+      font-size: 13px;
+      color: #5f6368;
+      margin-top: 4px;
+    }
+    .google-account-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .google-account-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 12px;
+      border: 1px solid #dadce0;
+      border-radius: 8px;
+      background: #ffffff;
+      cursor: pointer;
+      transition: background-color 0.15s, border-color 0.15s;
+      width: 100%;
+      text-align: left;
+    }
+    .google-account-item:hover {
+      background: #f8fafd;
+      border-color: #4285f4;
+    }
+    .google-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #ffffff;
+      font-weight: 600;
+      font-size: 15px;
+      flex-shrink: 0;
+    }
+    .google-account-info {
+      flex: 1;
+      min-width: 0;
+    }
+    .google-account-name {
+      font-size: 13px;
+      font-weight: 500;
+      color: #202124;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .google-account-email {
+      font-size: 12px;
+      color: #5f6368;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .google-add-account {
+      border-style: dashed;
+      color: #1a73e8;
+      font-weight: 500;
+    }
+    .google-footer-notice {
+      margin-top: 20px;
+      font-size: 11px;
+      color: #70757a;
+      line-height: 1.5;
+      text-align: center;
+    }
+    .google-meta-footer {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 24px;
+      padding-top: 14px;
+      border-top: 1px solid #f1f3f4;
+      font-size: 11px;
+      color: #5f6368;
+    }
+
+    /* Facebook Theming */
+    .fb-header-bar {
+      background: #1877f2;
+      color: #ffffff;
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .fb-card-body {
+      padding: 24px 24px 28px 24px;
+    }
+    .fb-app-notice {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid #e4e6eb;
+      margin-bottom: 20px;
+    }
+    .fb-btn {
+      background: #1877f2;
+      color: #ffffff;
+      font-weight: 600;
+      font-size: 14px;
+      padding: 10px 16px;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      width: 100%;
+      transition: background-color 0.15s;
+    }
+    .fb-btn:hover {
+      background: #166fe5;
+    }
+    .fb-btn-cancel {
+      background: #e4e6eb;
+      color: #4b4f56;
+      margin-top: 8px;
+    }
+    .fb-btn-cancel:hover {
+      background: #d8dadf;
+    }
+
+    /* Common Form */
+    .custom-form {
+      margin-top: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .custom-input {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid #dadce0;
+      border-radius: 6px;
+      font-size: 13px;
+      outline: none;
+    }
+    .custom-input:focus {
+      border-color: #1a73e8;
+      box-shadow: 0 0 0 1px #1a73e8;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Mock Browser Bar -->
+  <div class="mock-browser-bar">
+    <span class="ssl-lock">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/>
+      </svg>
+    </span>
+    <span id="mockUrl" class="url-text">https://accounts.google.com/o/oauth2/v2/auth</span>
+  </div>
+
+  <div class="auth-container">
+    <div class="auth-card" id="authCard">
+      <!-- Injected dynamically based on provider -->
+    </div>
+  </div>
+
+  <script>
+    (function() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const provider = (urlParams.get("provider") || "google").toLowerCase();
+      const mockUrlEl = document.getElementById("mockUrl");
+      const cardEl = document.getElementById("authCard");
+
+      if (provider === "facebook") {
+        document.title = "Log in to Facebook | Facebook";
+        mockUrlEl.textContent = "https://www.facebook.com/v18.0/dialog/oauth";
+
+        cardEl.innerHTML = `
+          <div class="fb-header-bar">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="#ffffff">
+              <path fill-rule="evenodd" d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" clip-rule="evenodd"/>
+            </svg>
+            <span style="font-weight: 600; font-size: 16px;">Facebook Login</span>
+          </div>
+          <div class="fb-card-body">
+            <div class="fb-app-notice">
+              <div style="width: 44px; height: 44px; border-radius: 8px; background: #e0f2fe; display: flex; align-items: center; justify-content: center; font-size: 20px;">
+                🗳️
+              </div>
+              <div style="flex: 1;">
+                <div style="font-size: 14px; font-weight: 600; color: #1c1e21;">ElectionVerify AI</div>
+                <div style="font-size: 12px; color: #65676b;">is requesting access to your name, profile picture, and email address.</div>
+              </div>
+            </div>
+
+            <div style="background: #f0f2f5; border-radius: 8px; padding: 12px; margin-bottom: 16px;">
+              <label style="font-size: 11px; font-weight: 600; color: #4b5563; display: block; margin-bottom: 4px;">Confirm Your Facebook Account</label>
+              <input id="fbEmail" type="email" class="custom-input" value="voter@facebook.com" placeholder="Email or Phone Number" style="margin-bottom: 8px;" />
+              <input id="fbName" type="text" class="custom-input" value="Facebook Voter" placeholder="Your Full Name" />
+            </div>
+
+            <button type="button" class="fb-btn" id="fbSubmitBtn">Continue</button>
+            <button type="button" class="fb-btn fb-btn-cancel" onclick="window.close()">Cancel</button>
+
+            <div style="margin-top: 16px; font-size: 11px; color: #8a8d91; text-align: center;">
+              This doesn't let the app post to Facebook without your permission.
+            </div>
+          </div>
+        `;
+
+        document.getElementById("fbSubmitBtn").addEventListener("click", function() {
+          const email = document.getElementById("fbEmail").value.trim() || "voter@facebook.com";
+          const name = document.getElementById("fbName").value.trim() || "Facebook Voter";
+          completeAuth(provider, email, name);
+        });
+
+      } else {
+        // Google OAuth
+        document.title = "Sign in - Google Accounts";
+        mockUrlEl.textContent = "https://accounts.google.com/o/oauth2/v2/auth";
+
+        cardEl.className = "auth-card google-card";
+        cardEl.innerHTML = `
+          <div class="google-header">
+            <svg width="40" height="40" viewBox="0 0 24 24">
+              <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+              <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+              <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" fill="#FBBC05"/>
+              <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" fill="#EA4335"/>
+            </svg>
+            <h1 class="google-title">Choose an account</h1>
+            <p class="google-subtitle">to continue to <span style="font-weight: 500; color: #202124;">ElectionVerify AI</span></p>
+          </div>
+
+          <div class="google-account-list" id="accountList">
+            <button type="button" class="google-account-item" data-email="voter.citizen@gmail.com" data-name="Voter Citizen">
+              <div class="google-avatar" style="background: #1a73e8;">V</div>
+              <div class="google-account-info">
+                <div class="google-account-name">Voter Citizen</div>
+                <div class="google-account-email">voter.citizen@gmail.com</div>
+              </div>
+            </button>
+
+            <button type="button" class="google-account-item" data-email="demo.voter@gmail.com" data-name="Demo Voter">
+              <div class="google-avatar" style="background: #0d9488;">D</div>
+              <div class="google-account-info">
+                <div class="google-account-name">Demo Voter</div>
+                <div class="google-account-email">demo.voter@gmail.com</div>
+              </div>
+            </button>
+
+            <button type="button" class="google-account-item google-add-account" id="toggleCustomBtn">
+              <div class="google-avatar" style="border: 1px dashed #1a73e8; color: #1a73e8; background: transparent;">+</div>
+              <div class="google-account-info">
+                <div class="google-account-name" style="color: #1a73e8;">Use another Google account</div>
+              </div>
+            </button>
+          </div>
+
+          <div id="customFormWrapper" style="display: none; margin-top: 14px;">
+            <form id="googleCustomForm" class="custom-form">
+              <input id="googleCustomEmail" type="email" class="custom-input" placeholder="Enter your Google email" required />
+              <input id="googleCustomName" type="text" class="custom-input" placeholder="Your Name (Optional)" />
+              <div style="display: flex; gap: 8px; margin-top: 4px;">
+                <button type="button" id="cancelCustomBtn" style="flex: 1; padding: 8px; border: 1px solid #dadce0; border-radius: 6px; background: #fff; cursor: pointer;">Back</button>
+                <button type="submit" style="flex: 1; padding: 8px; border: none; border-radius: 6px; background: #1a73e8; color: #fff; font-weight: 500; cursor: pointer;">Next</button>
+              </div>
+            </form>
+          </div>
+
+          <div class="google-footer-notice">
+            To continue, Google will share your name, email address, language preference, and profile picture with ElectionVerify AI.
+          </div>
+
+          <div class="google-meta-footer">
+            <span>English (United States)</span>
+            <div style="display: flex; gap: 12px;">
+              <span style="cursor: pointer;" onclick="window.close()">Cancel</span>
+              <span style="cursor: pointer;">Privacy</span>
+              <span style="cursor: pointer;">Terms</span>
+            </div>
+          </div>
+        `;
+
+        // Account click listeners
+        document.querySelectorAll(".google-account-item[data-email]").forEach(function(item) {
+          item.addEventListener("click", function() {
+            const email = this.getAttribute("data-email");
+            const name = this.getAttribute("data-name");
+            completeAuth(provider, email, name);
+          });
+        });
+
+        // Toggle custom input
+        const toggleBtn = document.getElementById("toggleCustomBtn");
+        const customWrapper = document.getElementById("customFormWrapper");
+        const accountList = document.getElementById("accountList");
+        const cancelCustomBtn = document.getElementById("cancelCustomBtn");
+
+        toggleBtn.addEventListener("click", function() {
+          accountList.style.display = "none";
+          customWrapper.style.display = "block";
+          document.getElementById("googleCustomEmail").focus();
+        });
+
+        cancelCustomBtn.addEventListener("click", function() {
+          customWrapper.style.display = "none";
+          accountList.style.display = "flex";
+        });
+
+        document.getElementById("googleCustomForm").addEventListener("submit", function(e) {
+          e.preventDefault();
+          const email = document.getElementById("googleCustomEmail").value.trim();
+          const name = document.getElementById("googleCustomName").value.trim() || email.split("@")[0];
+          completeAuth(provider, email, name);
+        });
+      }
+
+      function completeAuth(providerName, email, name) {
+        if (window.opener && !window.opener.closed) {
+          window.opener.postMessage({
+            type: "OAUTH_SUCCESS",
+            provider: providerName,
+            user: {
+              email: email,
+              name: name
+            }
+          }, window.location.origin);
+        }
+        window.close();
+      }
+    })();
+  </script>
+</body>
+</html>
