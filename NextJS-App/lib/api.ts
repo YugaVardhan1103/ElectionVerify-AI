@@ -114,12 +114,22 @@ async function request<T>(
       data: json.data !== undefined ? json.data : json,
     };
   } catch (err: unknown) {
-    // Network error (backend server offline / unreachable)
+    // Network error (backend server offline, CORS blocked, or unreachable)
     console.warn(`[API Client] Backend unreachable at ${API_BASE_URL}${endpoint}:`, err);
+    const isMixedContent =
+      typeof window !== "undefined" &&
+      window.location.protocol === "https:" &&
+      (API_BASE_URL.startsWith("http://localhost") ||
+        API_BASE_URL.startsWith("http://127.0.0.1"));
+
+    const errorMessage = isMixedContent
+      ? "Cannot connect to local backend (http://localhost:5000) from a secure HTTPS deployment. Please configure NEXT_PUBLIC_API_URL to point to your live backend API."
+      : "Backend service is currently unreachable. Please ensure the backend server is running.";
+
     return {
       success: false,
       isOffline: true,
-      error: "Backend service is currently unreachable. Please check your network connection.",
+      error: errorMessage,
     };
   }
 }
@@ -140,7 +150,9 @@ export const authApi = {
     if (res.isOffline) {
       return {
         success: false,
-        error: "Registration service is currently unreachable. Please check your connection or try again later.",
+        error:
+          res.error ||
+          "Registration service is currently unreachable. Please check your connection or try again later.",
       };
     }
 
@@ -162,7 +174,9 @@ export const authApi = {
     if (res.isOffline) {
       return {
         success: false,
-        error: "Authentication service is currently unreachable. Please check your network connection.",
+        error:
+          res.error ||
+          "Authentication service is currently unreachable. Please check your network connection.",
       };
     }
 
@@ -196,6 +210,15 @@ export const authApi = {
       setAuthToken(res.data.token);
       setStoredUser(res.data.user);
       return { success: true, user: res.data.user };
+    }
+
+    if (res.isOffline) {
+      return {
+        success: false,
+        error:
+          res.error ||
+          "Authentication service is currently unreachable. Please check your network connection.",
+      };
     }
 
     return {

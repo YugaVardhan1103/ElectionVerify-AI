@@ -39,7 +39,7 @@ export const env = Object.freeze({
 
   CORS_ORIGIN:
     process.env.CORS_ORIGIN ||
-    "http://localhost:5173,http://localhost:3000",
+    "http://localhost:5173,http://localhost:3000,http://localhost:4173,https://electionverify-react.vercel.app",
 
   // AI Provider Configuration
   AI_PROVIDER: process.env.AI_PROVIDER || "auto",

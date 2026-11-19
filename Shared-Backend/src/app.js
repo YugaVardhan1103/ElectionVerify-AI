@@ -22,22 +22,35 @@ app.set("trust proxy", 1);
 app.use(helmet());
 
 // CORS configuration
-const allowedOrigins = env.CORS_ORIGIN.split(",").map((s) => s.trim());
+const configuredOrigins = (env.CORS_ORIGIN || "")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
+
+const isAllowedOrigin = (origin) => {
+  if (!origin) return true;
+  if (configuredOrigins.includes("*") || configuredOrigins.includes(origin)) {
+    return true;
+  }
+  // Allow all localhost and 127.0.0.1 origins on any port (Vite, Next.js, preview, etc.)
+  if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
+    return true;
+  }
+  // Allow Vercel deployment and preview domains (*.vercel.app)
+  if (/^https:\/\/[a-zA-Z0-9_.-]+\.vercel\.app$/.test(origin)) {
+    return true;
+  }
+  return false;
+};
 
 app.use(
   cors({
     origin: (origin, callback) => {
-      if (
-        !origin ||
-        allowedOrigins.includes(origin) ||
-        allowedOrigins.includes("*")
-      ) {
+      if (isAllowedOrigin(origin)) {
         return callback(null, true);
       }
 
-      return callback(
-        new Error("CORS policy violation: Origin not allowed.")
-      );
+      return callback(null, false);
     },
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],

@@ -72,7 +72,9 @@ export async function login({ email, password } = {}) {
   if (res.isOffline) {
     return {
       success: false,
-      error: "Authentication service is currently unreachable. Please check your network connection.",
+      error:
+        res.error ||
+        "Authentication service is currently unreachable. Please check your network connection.",
     };
   }
 
@@ -120,6 +122,15 @@ export async function socialLogin({ provider = "google", idToken, accessToken, t
       success: true,
       user: res.data.user,
       token: res.data.token,
+    };
+  }
+
+  if (res.isOffline) {
+    return {
+      success: false,
+      error:
+        res.error ||
+        "Authentication service is currently unreachable. Please check your network connection.",
     };
   }
 
@@ -197,7 +208,9 @@ export async function signup({
   if (res.isOffline) {
     return {
       success: false,
-      error: "Registration service is currently unreachable. Please check your connection or try again later.",
+      error:
+        res.error ||
+        "Registration service is currently unreachable. Please check your connection or try again later.",
     };
   }
 

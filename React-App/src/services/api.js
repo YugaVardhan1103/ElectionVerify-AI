@@ -94,12 +94,22 @@ export async function request(endpoint, options = {}) {
       data: json.data !== undefined ? json.data : json,
     };
   } catch (err) {
-    // Backend server offline or network unreachable
+    // Backend server offline, CORS blocked, or network unreachable
     console.warn(`[API Client] Backend unreachable at ${API_BASE_URL}${endpoint}:`, err);
+    const isMixedContent =
+      typeof window !== "undefined" &&
+      window.location.protocol === "https:" &&
+      (API_BASE_URL.startsWith("http://localhost") ||
+        API_BASE_URL.startsWith("http://127.0.0.1"));
+
+    const errorMessage = isMixedContent
+      ? "Cannot connect to local backend (http://localhost:5000) from a secure HTTPS deployment. Please configure VITE_API_URL to point to your live backend API."
+      : "Backend service is currently unreachable. Please ensure the backend server is running.";
+
     return {
       success: false,
       isOffline: true,
-      error: "Backend service is currently unreachable. Please check your network connection.",
+      error: errorMessage,
     };
   }
 }
