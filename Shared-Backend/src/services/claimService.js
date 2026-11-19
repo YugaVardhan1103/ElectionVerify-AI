@@ -56,17 +56,18 @@ export class ClaimService {
    * @param {object} queryOptions
    * @returns {Promise<{ claims: Array<object>, pagination: object }>}
    */
-  async getClaims(queryOptions = {}) {
+  async getClaims(queryOptions = {}, currentUser = null) {
     const page = Math.max(1, parseInt(queryOptions.page || "1", 10));
     const limit = Math.min(100, Math.max(1, parseInt(queryOptions.limit || "10", 10)));
     const skip = (page - 1) * limit;
 
     const filter = {};
+    const conditions = [];
 
     // Search query on title and claimText
     if (queryOptions.searchTerm && typeof queryOptions.searchTerm === "string") {
       const searchRegex = new RegExp(queryOptions.searchTerm.trim(), "i");
-      filter.$or = [{ title: searchRegex }, { claimText: searchRegex }];
+      conditions.push({ $or: [{ title: searchRegex }, { claimText: searchRegex }] });
     }
 
     // Status filter
@@ -84,9 +85,28 @@ export class ClaimService {
       filter.language = queryOptions.language;
     }
 
-    // Submitter filter
+    // Submitter account isolation: prevent users from seeing other accounts' in-progress submissions
     if (queryOptions.submittedBy && mongoose.isValidObjectId(queryOptions.submittedBy)) {
-      filter.submittedBy = queryOptions.submittedBy;
+      conditions.push({ submittedBy: queryOptions.submittedBy });
+    } else if (currentUser && currentUser.role !== "admin" && currentUser.role !== "reviewer") {
+      conditions.push({
+        $or: [
+          { submittedBy: currentUser._id },
+          { status: CLAIM_STATUS.COMPLETED },
+          { submittedBy: null },
+        ],
+      });
+    } else if (!currentUser) {
+      conditions.push({
+        $or: [
+          { status: CLAIM_STATUS.COMPLETED },
+          { submittedBy: null },
+        ],
+      });
+    }
+
+    if (conditions.length > 0) {
+      filter.$and = conditions;
     }
 
     const [rawClaims, total] = await Promise.all([

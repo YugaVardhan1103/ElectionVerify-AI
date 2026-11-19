@@ -67,7 +67,7 @@ export async function submitClaim(req, res, next) {
  */
 export async function getClaims(req, res, next) {
   try {
-    const result = await claimService.getClaims(req.query);
+    const result = await claimService.getClaims(req.query, req.user);
     res.status(200).json({
       success: true,
       data: result,

@@ -20,8 +20,8 @@ router.post(
   submitClaim
 );
 
-// Claim listings with filtering, search, pagination
-router.get("/", getClaims);
+// Claim listings with filtering, search, pagination (user-aware)
+router.get("/", optionalAuth, getClaims);
 
 // Derived verification stats
 router.get("/stats", getClaimStats);
