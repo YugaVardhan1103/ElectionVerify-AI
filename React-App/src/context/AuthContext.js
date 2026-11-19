@@ -3,14 +3,14 @@ import { createContext, useContext } from "react";
 /**
  * ElectionVerify AI - Authentication Context
  *
- * Provides reactive access to client-side demo authentication state.
+ * Provides reactive access to user authentication state.
  */
 export const AuthContext = createContext(null);
 
 /**
  * Custom hook to access authentication context.
  *
- * @returns {object} Auth context value { isAuthenticated, user, isDemo, login, signup, logout }
+ * @returns {object} Auth context value { isAuthenticated, user, login, signup, logout }
  */
 export function useAuth() {
   const context = useContext(AuthContext);

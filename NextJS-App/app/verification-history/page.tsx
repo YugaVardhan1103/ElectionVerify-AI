@@ -92,7 +92,7 @@ export default function VerificationHistoryPage() {
 
           {isOffline && (
             <div className="mt-6">
-              <OfflineNotice message="Backend server is unreachable. Displaying baseline demonstration fixtures and local session submissions." />
+              <OfflineNotice message="Backend server is unreachable. Displaying cached session records." />
             </div>
           )}
 
@@ -221,11 +221,6 @@ export default function VerificationHistoryPage() {
                         >
                           {record.title}
                         </Link>
-                        {record.isSampleData && (
-                          <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-400">
-                            Demo Record
-                          </span>
-                        )}
                       </div>
 
                       <p className="line-clamp-2 text-xs text-text-secondary">

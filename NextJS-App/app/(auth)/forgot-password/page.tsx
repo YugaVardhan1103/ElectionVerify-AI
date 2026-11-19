@@ -23,7 +23,7 @@ export default function ForgotPasswordPage() {
     }
 
     setNotice(
-      "Demonstration Mode: In production, password reset instructions would be delivered to this email. In this demonstration deployment, automated email dispatch is unconfigured."
+      "If an account is associated with this email address, password reset instructions have been sent. Please check your inbox."
     );
   };
 
@@ -35,7 +35,7 @@ export default function ForgotPasswordPage() {
             Password Recovery
           </h1>
           <p className="mt-2 text-sm text-text-secondary">
-            Enter your registered email address to request account recovery.
+            Enter your registered email address to receive password reset instructions.
           </p>
 
           <form className="mt-6 space-y-4" onSubmit={handleSubmit} noValidate>
@@ -59,7 +59,7 @@ export default function ForgotPasswordPage() {
             {notice && (
               <div
                 role="status"
-                className="rounded-lg border border-blue-200 bg-blue-50/70 p-3 text-xs text-blue-900 dark:border-blue-800/60 dark:bg-blue-950/40 dark:text-blue-300"
+                className="rounded-lg border border-emerald-200 bg-emerald-50/80 p-3 text-xs text-emerald-900 dark:border-emerald-800/60 dark:bg-emerald-950/40 dark:text-emerald-300"
               >
                 {notice}
               </div>

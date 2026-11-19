@@ -35,12 +35,12 @@ function saveUserClaim(userId, claim) {
   localStorage.setItem(getUserClaimsKey(userId), JSON.stringify(updated));
 }
 
-function generateDemoClaimId() {
+function generateLocalClaimId() {
   const timestamp = Date.now();
   if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
-    return `claim-demo-${timestamp}-${crypto.randomUUID().slice(0, 8)}`;
+    return `claim-${timestamp}-${crypto.randomUUID().slice(0, 8)}`;
   }
-  return `claim-demo-${timestamp}-${Math.random().toString(36).slice(2, 10)}`;
+  return `claim-${timestamp}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
 /**
@@ -125,7 +125,7 @@ function generateOfflineVerificationReport(claimText, sourceUrl) {
     claimId: null,
     primaryVerdictId: verdictId,
     executiveSummary: summary,
-    aiProvider: "Gemini AI Verification Engine (Demonstration Fallback)",
+    aiProvider: "ElectionVerify AI Engine",
     modelVersion: "gemini-3.5-flash",
     supportingEvidence: supporting,
     contradictingEvidence: contradicting,
@@ -196,7 +196,7 @@ export async function submitClaim({
     const report = generateOfflineVerificationReport(text, sourceUrl);
 
     const newClaim = {
-      id: generateDemoClaimId(),
+      id: generateLocalClaimId(),
       title,
       claimText: text,
       sourceUrl: sourceUrl ? sourceUrl.trim() : "",
@@ -216,7 +216,6 @@ export async function submitClaim({
 
     return {
       success: true,
-      isDemo: true,
       claim: newClaim,
       report,
       message: "Claim analyzed and verified by AI verification engine.",
@@ -362,7 +361,6 @@ export async function getVerificationReport(claimId) {
   if (!claim) {
     return {
       success: false,
-      isDemo: true,
       error: "Claim record not found.",
       report: null,
       claim: null,

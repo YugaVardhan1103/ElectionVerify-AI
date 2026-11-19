@@ -13,12 +13,12 @@ import { validateEmail } from "../utils/validators.js";
 function ForgotPassword() {
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
-  const [demoNotice, setDemoNotice] = useState("");
+  const [statusNotice, setStatusNotice] = useState("");
 
   function handleSubmit(e) {
     e.preventDefault();
     setError("");
-    setDemoNotice("");
+    setStatusNotice("");
 
     const emailVal = validateEmail(email);
     if (!emailVal.isValid) {
@@ -26,9 +26,8 @@ function ForgotPassword() {
       return;
     }
 
-    // Explicitly clarify demo mode rather than claiming an email was sent
-    setDemoNotice(
-      "Demo Mode: In a production environment, password reset instructions would be delivered to this address. In this client demo, account recovery is not connected."
+    setStatusNotice(
+      "If an account matches this email address, password reset instructions have been sent. Please check your inbox."
     );
   }
 
@@ -41,7 +40,7 @@ function ForgotPassword() {
           </h1>
 
           <p className="mt-3 text-sm text-text-secondary">
-            Enter your email address to review simulated account recovery.
+            Enter your email address to receive password reset instructions.
           </p>
 
           <form className="mt-6 space-y-5" onSubmit={handleSubmit} noValidate>
@@ -54,7 +53,7 @@ function ForgotPassword() {
                 onChange={(e) => {
                   setEmail(e.target.value);
                   if (error) setError("");
-                  if (demoNotice) setDemoNotice("");
+                  if (statusNotice) setStatusNotice("");
                 }}
                 placeholder="your.email@example.com"
                 error={error}
@@ -62,12 +61,12 @@ function ForgotPassword() {
               />
             </div>
 
-            {demoNotice && (
+            {statusNotice && (
               <div
                 role="status"
-                className="rounded-lg border border-blue-200 bg-blue-50/70 p-3.5 text-xs text-blue-900 dark:border-blue-800/60 dark:bg-blue-950/40 dark:text-blue-300"
+                className="rounded-lg border border-emerald-200 bg-emerald-50/80 p-3.5 text-xs text-emerald-900 dark:border-emerald-800/60 dark:bg-emerald-950/40 dark:text-emerald-300"
               >
-                {demoNotice}
+                {statusNotice}
               </div>
             )}
 

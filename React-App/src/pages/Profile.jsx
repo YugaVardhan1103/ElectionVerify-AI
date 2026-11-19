@@ -610,7 +610,7 @@ function Profile() {
                 Session Sign Out
               </h2>
               <p className="mt-1 text-xs text-text-secondary">
-                Sign out of your active demonstration session.
+                Sign out of your account on this device.
               </p>
             </div>
 
@@ -646,7 +646,7 @@ function Profile() {
               </h3>
 
               <p className="mt-3 text-sm text-text-secondary">
-                Are you sure you want to end your current demo session? Any temporary in-memory submissions remain available until a full browser reload.
+                Are you sure you want to sign out of your account?
               </p>
 
               <div className="mt-6 flex justify-end gap-3">

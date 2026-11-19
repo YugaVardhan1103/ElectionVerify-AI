@@ -395,15 +395,8 @@ function Login() {
         <div className="mb-6 text-center">
           <h1 className="text-3xl font-bold">Welcome Back</h1>
           <p className="mt-2 text-text-secondary">
-            Login to your ElectionVerify AI demo session
+            Sign in to access your ElectionVerify AI account
           </p>
-        </div>
-
-        {/* Demo Mode Notice */}
-        <div className="mb-6 rounded-lg border border-blue-200 bg-blue-50/70 p-3.5 text-xs text-blue-900 dark:border-blue-800/60 dark:bg-blue-950/40 dark:text-blue-300">
-          <span className="font-semibold">Demo Notice:</span> This application runs
-          in client demonstration mode. Any valid email format and compliant password
-          (8+ characters, upper, lower, number) can be used to explore the platform.
         </div>
 
         <div className="card">
@@ -445,7 +438,7 @@ function Login() {
                     setFieldErrors((prev) => ({ ...prev, email: "" }));
                   }
                 }}
-                placeholder="demo.user@example.com"
+                placeholder="name@example.com"
                 error={fieldErrors.email}
                 required
               />

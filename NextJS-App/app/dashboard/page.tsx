@@ -71,7 +71,7 @@ export default function DashboardPage() {
           </div>
 
           {isOffline && (
-            <OfflineNotice message="Backend API is running in offline demo mode. Demonstrating with local session state." />
+            <OfflineNotice message="Backend API is unreachable. Displaying cached session records." />
           )}
 
           {/* Metric Cards */}

@@ -97,15 +97,8 @@ function Signup() {
         <div className="mb-6 text-center">
           <h1 className="text-3xl font-bold">Create Your Account</h1>
           <p className="mt-2 text-text-secondary">
-            Join the ElectionVerify AI demonstration platform
+            Get started with ElectionVerify AI
           </p>
-        </div>
-
-        {/* Demo Mode Notice */}
-        <div className="mb-6 rounded-lg border border-blue-200 bg-blue-50/70 p-3.5 text-xs text-blue-900 dark:border-blue-800/60 dark:bg-blue-950/40 dark:text-blue-300">
-          <span className="font-semibold">Demo Notice:</span> No real account is
-          persisted to a backend database. Passwords are validated locally and
-          immediately discarded.
         </div>
 
         {/* Signup Form */}
@@ -292,7 +285,7 @@ function Signup() {
                   }}
                 />
                 <span>
-                  I agree to the Terms of Demonstration and Community Guidelines.
+                  I agree to the Terms of Service and Community Guidelines.
                 </span>
               </label>
 

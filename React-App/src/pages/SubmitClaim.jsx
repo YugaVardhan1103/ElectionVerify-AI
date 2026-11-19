@@ -112,7 +112,6 @@ function SubmitClaim() {
             result.message ||
             "Claim submitted and analyzed through the verification pipeline.",
           claim: result.claim,
-          isDemo: Boolean(result.isDemo),
         });
         setClaim("");
         setSourceUrl("");
@@ -163,7 +162,7 @@ function SubmitClaim() {
         {/* Quick Example Presets */}
         <div className="card">
           <p className="text-xs font-semibold uppercase tracking-wider text-text-secondary">
-            Quick Test Examples (Click to populate)
+            Sample Claims (Click to populate)
           </p>
           <div className="mt-3 grid grid-cols-1 gap-2.5 sm:grid-cols-3">
             {EXAMPLE_CLAIMS.map((ex, idx) => (

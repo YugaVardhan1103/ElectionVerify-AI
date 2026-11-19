@@ -87,9 +87,9 @@ function Dashboard() {
           </p>
         </div>
 
-        {/* Offline Demo Notice if server is unreachable */}
+        {/* Offline Notice if server is unreachable */}
         {isOffline ? (
-          <OfflineNotice message="Backend server is unreachable. Displaying baseline demonstration fixtures and local session submissions." />
+          <OfflineNotice message="Backend server is unreachable. Displaying cached verification records." />
         ) : (
           <div className="mb-8 rounded-lg border border-emerald-200 bg-emerald-50/70 p-3.5 text-xs text-emerald-900 dark:border-emerald-800/60 dark:bg-emerald-950/40 dark:text-emerald-300">
             <span className="font-semibold">Connected:</span> Live verification data connected to ElectionVerify Shared-Backend API.

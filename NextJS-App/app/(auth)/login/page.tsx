@@ -372,13 +372,8 @@ export default function LoginPage() {
         <div className="mb-6 text-center">
           <h1 className="text-3xl font-bold text-text-primary">Welcome Back</h1>
           <p className="mt-2 text-sm text-text-secondary">
-            Sign in to access your ElectionVerify AI dashboard
+            Sign in to access your ElectionVerify AI account
           </p>
-        </div>
-
-        {/* Demo Mode Notice */}
-        <div className="mb-6 rounded-lg border border-blue-200 bg-blue-50/70 p-3.5 text-xs text-blue-900 dark:border-blue-800/60 dark:bg-blue-950/40 dark:text-blue-300">
-          <span className="font-semibold">Authentication Notice:</span> Connects directly to the Shared-Backend REST API when online. In offline demo mode, any valid email format and standard password can be used to explore.
         </div>
 
         <div className="card">

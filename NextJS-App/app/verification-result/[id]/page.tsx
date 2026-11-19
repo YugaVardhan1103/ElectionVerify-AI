@@ -52,7 +52,7 @@ export default async function ClaimResultPage({ params }: PageProps) {
           </span>
         </div>
 
-        {/* UI Demonstration / Transparency Notice */}
+        {/* Transparency Notice */}
         <div className="rounded-xl border border-blue-200 bg-blue-50/80 p-4 text-xs text-blue-900 dark:border-blue-800/60 dark:bg-blue-950/40 dark:text-blue-200">
           <p className="font-bold">Verification Transparency Notice</p>
           <p className="mt-1">

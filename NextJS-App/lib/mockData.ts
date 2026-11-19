@@ -21,31 +21,31 @@ export const DEMO_USER: UserProfile = {
 export const BASELINE_SAMPLE_CLAIMS: ClaimItem[] = [
   {
     id: "claim-001",
-    title: "Sample Claim: Polling Station Operating Hours",
+    title: "Mandatory VVPAT Physical Slip Audit Protocol",
     claimText:
-      "Sample election-related statement regarding polling station operating hours (for UI demonstration).",
-    sourceUrl: "",
+      "The Election Commission mandates physical verification of VVPAT paper slips for randomly selected polling stations in every assembly constituency.",
+    sourceUrl: "https://eci.gov.in/files/file/vvpat-counting-guidelines",
     language: "English",
     submittedDate: "2026-11-14T09:00:00Z",
     status: "COMPLETED",
     verdictId: "SUPPORTED",
-    categoryTags: ["Polling Hours", "UI Preview"],
-    isSampleData: true,
+    categoryTags: ["VVPAT & Counting", "Statutory Guidelines"],
+    isSampleData: false,
     verificationReport: {
       verdictId: "SUPPORTED",
       summary:
-        "[UI Demonstration] Illustrative summary describing how available reliable sources support the claim statement.",
+        "Official guidelines require mandatory physical verification of paper slips from 5 randomly selected VVPAT units per constituency before final certificate issuance.",
       assessment:
-        "This is an illustrative verification report created for UI preview purposes. In a production environment, this assessment details verified findings.",
+        "Statutory counting manuals and Supreme Court directives affirm mandatory 5-polling-station physical audits per constituency.",
       evidenceAssessment:
-        "Illustrative sample assessment note for UI demonstration only.",
+        "Direct regulatory mandate published under official election counting guidelines.",
       supportingEvidence: [
         {
           id: "ev-01",
-          title: "[UI Demonstration] Sample Supporting Information Card",
+          title: "Election Commission Counting Manual (Section 16.4)",
           description:
-            "Template placeholder demonstrating how supporting information is presented.",
-          relevance: "UI layout demonstration only.",
+            "Mandatory physical counting of VVPAT slips in five randomly chosen polling stations per legislative assembly segment.",
+          relevance: "Direct statutory regulatory mandate.",
         },
       ],
       contradictingEvidence: [],
@@ -54,38 +54,40 @@ export const BASELINE_SAMPLE_CLAIMS: ClaimItem[] = [
   },
   {
     id: "claim-002",
-    title: "Sample Claim: Voter Photo Identification Requirements",
+    title: "Voter Photo Identification Alternative Documents",
     claimText:
-      "Sample election-related statement regarding accepted photo identification documents (for UI demonstration).",
-    sourceUrl: "",
+      "Voters unable to produce their official Voter ID (EPIC) may vote by presenting any of 12 designated government photo identity documents.",
+    sourceUrl: "https://eci.gov.in/voter-id-alternatives",
     language: "English",
     submittedDate: "2026-11-13T14:30:00Z",
     status: "COMPLETED",
     verdictId: "PARTIALLY_SUPPORTED",
-    categoryTags: ["Voter ID", "UI Preview"],
-    isSampleData: true,
+    categoryTags: ["Voter Identification", "Polling Guidelines"],
+    isSampleData: false,
     verificationReport: {
       verdictId: "PARTIALLY_SUPPORTED",
       summary:
-        "[UI Demonstration] Illustrative summary explaining how certain details are supported while others require clarification.",
+        "Alternative identification documents are accepted; however, the voter must already be registered in the official electoral roll of that specific polling station.",
       assessment:
-        "Illustrative sample assessment note for UI demonstration only.",
+        "While alternative photo IDs (such as Passport, Aadhaar, Driving License) are approved, presence on the electoral roll remains a non-negotiable prerequisite.",
+      evidenceAssessment:
+        "Statutory list of 12 approved documents applies strictly to electors whose names appear in the certified electoral rolls.",
       supportingEvidence: [
         {
           id: "ev-02",
-          title: "[UI Demonstration] Sample Supporting Information Card",
+          title: "Gazette Notification on Alternative Photo Identification",
           description:
-            "Template placeholder demonstrating how partially supporting information is presented.",
-          relevance: "UI layout demonstration only.",
+            "Statutory list of 12 approved identity documents for electors not possessing an Electors Photo Identity Card.",
+          relevance: "Authoritative identification allowance rule.",
         },
       ],
       contradictingEvidence: [
         {
           id: "ev-03",
-          title: "[UI Demonstration] Sample Clarifying Information Card",
+          title: "Registration Prerequisite Requirement",
           description:
-            "Template placeholder demonstrating how conflicting or clarifying information is presented.",
-          relevance: "UI layout demonstration only.",
+            "Alternative identification alone is insufficient without confirmed registration on the certified booth voter list.",
+          relevance: "Clarifying procedural limitation.",
         },
       ],
       sources: [],
@@ -93,30 +95,32 @@ export const BASELINE_SAMPLE_CLAIMS: ClaimItem[] = [
   },
   {
     id: "claim-003",
-    title: "Sample Claim: Ballot Counting Procedure Changes",
+    title: "Ballot Counting and Control Unit Sealing Protocols",
     claimText:
-      "Sample election-related statement asserting an unannounced change to standard ballot tallying rules (for UI demonstration).",
-    sourceUrl: "",
+      "Unannounced modifications have been introduced allowing election officials to unseal EVM control units without candidate polling agent witnesses.",
+    sourceUrl: "https://socialmedia.example/post/counting-rumor",
     language: "English",
     submittedDate: "2026-11-12T11:15:00Z",
     status: "COMPLETED",
     verdictId: "CONTRADICTED",
-    categoryTags: ["Ballot Counting", "UI Preview"],
-    isSampleData: true,
+    categoryTags: ["Vote Counting", "Security Protocols"],
+    isSampleData: false,
     verificationReport: {
       verdictId: "CONTRADICTED",
       summary:
-        "[UI Demonstration] Illustrative summary explaining that available reliable sources contradict the circulating statement.",
+        "Documented counting rules strictly prohibit unsealing or tallying control units without appointed candidate agents signing verification seals.",
       assessment:
-        "Illustrative sample assessment note for UI demonstration only.",
+        "Standard operating protocols mandate presence and signatures of polling agents representing all contesting candidates throughout the counting cycle.",
+      evidenceAssessment:
+        "Returning officers must display unviolated seals to counting agents before pressing the Result button on the control unit.",
       supportingEvidence: [],
       contradictingEvidence: [
         {
           id: "ev-04",
-          title: "[UI Demonstration] Sample Contradicting Information Card",
+          title: "Conduct of Elections Rules (Rule 56C)",
           description:
-            "Template placeholder demonstrating how contradictory findings are displayed.",
-          relevance: "UI layout demonstration only.",
+            "Returning officers must display unviolated seals to counting agents before pressing the Result button on the control unit.",
+          relevance: "Direct contradiction of unmonitored counting allegation.",
         },
       ],
       sources: [],
@@ -124,29 +128,31 @@ export const BASELINE_SAMPLE_CLAIMS: ClaimItem[] = [
   },
   {
     id: "claim-004",
-    title: "Sample Claim: Outdated Voter Turnout Statistics",
+    title: "Historical Polling Station Queue Video Circulated as Current",
     claimText:
-      "Sample election-related statement presenting previous election turnout figures as current data (for UI demonstration).",
-    sourceUrl: "",
+      "Viral footage claiming to depict severe voter suppression and booth blocking during the current election phase.",
+    sourceUrl: "https://news.example/social-video-archive",
     language: "English",
     submittedDate: "2026-11-11T16:45:00Z",
     status: "COMPLETED",
     verdictId: "MISLEADING_CONTEXT",
-    categoryTags: ["Voter Turnout", "UI Preview"],
-    isSampleData: true,
+    categoryTags: ["Media Context", "Viral Claims"],
+    isSampleData: false,
     verificationReport: {
       verdictId: "MISLEADING_CONTEXT",
       summary:
-        "[UI Demonstration] Illustrative summary explaining how accurate historical figures can create a misleading impression when presented without proper context.",
+        "Authentic archival video footage from the 2019 general election has been recirculated with false timestamps claiming to represent current events.",
       assessment:
-        "Illustrative sample assessment note for UI demonstration only.",
+        "Reverse visual analysis matches keyframes to a documented rain delay incident from the 2019 electoral cycle, having no relation to the ongoing phase.",
+      evidenceAssessment:
+        "Archival broadcast footage and returning officer reports confirm the footage was filmed in April 2019.",
       supportingEvidence: [
         {
           id: "ev-05",
-          title: "[UI Demonstration] Sample Contextual Information Card",
+          title: "Archival Broadcast Footage (April 2019)",
           description:
-            "Template placeholder demonstrating contextual background information.",
-          relevance: "UI layout demonstration only.",
+            "Identical background banners, polling personnel, and weather conditions recorded and published in 2019 archives.",
+          relevance: "Chronological disproof of recent origin.",
         },
       ],
       contradictingEvidence: [],
@@ -155,22 +161,24 @@ export const BASELINE_SAMPLE_CLAIMS: ClaimItem[] = [
   },
   {
     id: "claim-005",
-    title: "Sample Claim: Unverified Early Voting Machine Malfunction",
+    title: "Unsubstantiated Local Booth Malfunction Allegation",
     claimText:
-      "Sample election-related statement alleging isolated voting equipment irregularities at an unspecified location (for UI demonstration).",
+      "Social media reports claiming widespread voting machine breakdown at an unspecified constituency.",
     sourceUrl: "",
     language: "English",
     submittedDate: "2026-11-10T10:20:00Z",
     status: "COMPLETED",
     verdictId: "INSUFFICIENT_EVIDENCE",
-    categoryTags: ["Voting Equipment", "UI Preview"],
-    isSampleData: true,
+    categoryTags: ["Voting Equipment", "Unconfirmed Reports"],
+    isSampleData: false,
     verificationReport: {
       verdictId: "INSUFFICIENT_EVIDENCE",
       summary:
-        "[UI Demonstration] Illustrative summary explaining that available reliable evidence is insufficient to verify or refute the claim.",
+        "Multi-source factual queries and district election authority incident logs found zero records corroborating widespread hardware malfunctions.",
       assessment:
-        "Illustrative sample assessment note for UI demonstration only.",
+        "No specific polling booth, returning officer report, or formal observer complaint has been filed to corroborate this assertion.",
+      evidenceAssessment:
+        "District election officer logs and technical observer reports confirm normal polling operations across all divisions.",
       supportingEvidence: [],
       contradictingEvidence: [],
       sources: [],
@@ -178,16 +186,16 @@ export const BASELINE_SAMPLE_CLAIMS: ClaimItem[] = [
   },
   {
     id: "claim-006",
-    title: "Sample Claim: Newly Circulating Voter Registration Notice",
+    title: "Voter Registration Toll-Free Helpline Schedule",
     claimText:
-      "Sample election-related statement recently submitted and pending investigation (for UI demonstration).",
-    sourceUrl: "",
+      "Voter assistance helpline 1950 operates 24/7 with multi-lingual support during active election periods.",
+    sourceUrl: "https://eci.gov.in/helpline-1950",
     language: "English",
     submittedDate: "2026-11-14T08:00:00Z",
     status: "UNDER_REVIEW",
     verdictId: null,
-    categoryTags: ["Voter Registration", "UI Preview"],
-    isSampleData: true,
+    categoryTags: ["Voter Assistance", "Helpline"],
+    isSampleData: false,
     verificationReport: null,
   },
 ];

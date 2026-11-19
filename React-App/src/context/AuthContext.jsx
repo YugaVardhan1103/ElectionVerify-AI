@@ -12,12 +12,11 @@ import {
  * ElectionVerify AI - Authentication Provider Component
  *
  * Exposes reactive authentication state and methods backed by the
- * Shared-Backend JWT authentication API, with seamless offline demo fallback.
+ * Shared-Backend JWT authentication API.
  */
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isDemo, setIsDemo] = useState(false);
 
   // Initialize and verify session on initial mount
   useEffect(() => {
@@ -27,7 +26,6 @@ export function AuthProvider({ children }) {
         const currentUser = await getMe();
         if (isMounted && currentUser) {
           setUser(currentUser);
-          setIsDemo(Boolean(currentUser.isDemoUser));
         }
       } catch (err) {
         console.warn("Auth initialization failed:", err);
@@ -49,7 +47,6 @@ export function AuthProvider({ children }) {
     setIsLoading(false);
     if (result.success && result.user) {
       setUser(result.user);
-      setIsDemo(Boolean(result.isDemo));
     }
     return result;
   }, []);
@@ -60,7 +57,6 @@ export function AuthProvider({ children }) {
     setIsLoading(false);
     if (result.success && result.user) {
       setUser(result.user);
-      setIsDemo(false);
     }
     return result;
   }, []);
@@ -76,7 +72,6 @@ export function AuthProvider({ children }) {
         agreedToTerms,
       });
       setIsLoading(false);
-      // Note: User is redirected to login page after signup, so we do not log them in automatically.
       return result;
     },
     []
@@ -85,7 +80,6 @@ export function AuthProvider({ children }) {
   const logout = useCallback(async () => {
     const result = await apiLogout();
     setUser(null);
-    setIsDemo(false);
     return result;
   }, []);
 
@@ -94,13 +88,12 @@ export function AuthProvider({ children }) {
       isAuthenticated: Boolean(user),
       user,
       isLoading,
-      isDemo,
       login,
       socialLogin,
       signup,
       logout,
     }),
-    [user, isLoading, isDemo, login, socialLogin, signup, logout]
+    [user, isLoading, login, socialLogin, signup, logout]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

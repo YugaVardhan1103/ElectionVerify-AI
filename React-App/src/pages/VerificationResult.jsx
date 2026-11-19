@@ -234,7 +234,7 @@ function VerificationResult() {
 
         {/* Offline Notice if backend is down */}
         {isOffline && (
-          <OfflineNotice message="Backend server is unreachable. Displaying local demonstration record." />
+          <OfflineNotice message="Backend server is unreachable. Displaying cached verification record." />
         )}
 
         {/* Verification Transparency Header */}

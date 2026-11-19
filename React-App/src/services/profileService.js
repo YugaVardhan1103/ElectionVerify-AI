@@ -6,7 +6,6 @@
  * with offline demo fallback when the backend server is unreachable.
  */
 
-import { DEMO_USER } from "../data/mockData.js";
 import { request, getStoredUser, setStoredUser } from "./api.js";
 import {
   validateName,
@@ -16,18 +15,20 @@ import {
 } from "../utils/validators.js";
 
 /**
- * Helper to build an active profile from stored user or defaults
+ * Helper to build an active profile from stored user
  */
 function resolveCurrentProfile() {
   const stored = getStoredUser();
   if (stored) {
     return {
-      id: stored.id || DEMO_USER.id,
+      id: stored.id || stored._id,
       name: stored.name || "User",
       email: stored.email || "",
       role: stored.role || "user",
       accountStatus: stored.accountStatus || "Active",
       joinedDate: stored.joinedDate || new Date().toISOString(),
+      avatarUrl: stored.avatarUrl || null,
+      authProvider: stored.authProvider || "local",
       preferences: stored.preferences || {
         preferredLanguage: "English",
         theme: "System",
@@ -39,43 +40,27 @@ function resolveCurrentProfile() {
       },
     };
   }
-
-  return {
-    id: DEMO_USER.id,
-    name: DEMO_USER.name,
-    email: DEMO_USER.email,
-    role: DEMO_USER.role,
-    accountStatus: DEMO_USER.accountStatus,
-    joinedDate: DEMO_USER.joinedDate,
-    preferences: {
-      preferredLanguage: DEMO_USER.preferences.preferredLanguage,
-      theme: DEMO_USER.preferences.theme,
-      notifications: { ...DEMO_USER.preferences.notifications },
-    },
-  };
+  return null;
 }
 
 /**
  * Retrieve user profile from Shared-Backend API or local session fallback.
  *
- * @returns {Promise<object>}
+ * @returns {Promise<object|null>}
  */
 export async function getProfile() {
   const res = await request("/users/profile");
 
   if (res.success && res.data?.profile) {
-    return {
+    const profile = {
       ...res.data.profile,
       id: res.data.profile.id || res.data.profile._id,
-      isDemo: false,
     };
+    setStoredUser(profile);
+    return profile;
   }
 
-  const profile = resolveCurrentProfile();
-  return {
-    ...profile,
-    isDemo: true,
-  };
+  return resolveCurrentProfile();
 }
 
 /**
@@ -231,9 +216,8 @@ export async function updatePassword({
 
   if (res.isOffline) {
     return {
-      success: true,
-      isDemo: true,
-      message: "Password validated and updated in demo session (never persisted).",
+      success: false,
+      error: "Authentication server is unreachable. Password changes require an active connection.",
     };
   }
 

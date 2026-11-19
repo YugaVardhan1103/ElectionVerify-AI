@@ -99,7 +99,7 @@ export async function request(endpoint, options = {}) {
     return {
       success: false,
       isOffline: true,
-      error: "Backend API is currently offline. Operating in client demo mode.",
+      error: "Backend service is currently unreachable. Please check your network connection.",
     };
   }
 }

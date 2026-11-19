@@ -2,7 +2,6 @@ import { ClaimItem, ClaimStats, UserProfile } from "@/types";
 import {
   BASELINE_SAMPLE_CLAIMS,
   BASELINE_STATS,
-  DEMO_USER,
 } from "./mockData";
 
 export const API_BASE_URL =
@@ -120,7 +119,7 @@ async function request<T>(
     return {
       success: false,
       isOffline: true,
-      error: "Backend API is currently offline. Operating in client demo mode.",
+      error: "Backend service is currently unreachable. Please check your network connection.",
     };
   }
 }
@@ -139,18 +138,10 @@ export const authApi = {
     }
 
     if (res.isOffline) {
-      const newUser: UserProfile = {
-        id: `usr_${Date.now()}`,
-        name: data.name.trim(),
-        email: data.email.trim(),
-        role: "user",
-        accountStatus: "Active",
-        joinedDate: new Date().toISOString(),
-        preferences: DEMO_USER.preferences,
+      return {
+        success: false,
+        error: "Registration service is currently unreachable. Please check your connection or try again later.",
       };
-      saveRegisteredUser({ name: data.name.trim(), email: data.email.trim() });
-      // Do not set auth token here so user proceeds to login page
-      return { success: true, user: newUser, isDemo: true };
     }
 
     return { success: false, error: res.error };
@@ -169,36 +160,9 @@ export const authApi = {
     }
 
     if (res.isOffline) {
-      const cleanEmail = data.email.trim().toLowerCase();
-      const registered = getRegisteredUsers().find(
-        (u) => u.email.toLowerCase() === cleanEmail
-      );
-      const isDemoAccount =
-        cleanEmail === "demo.user@example.com" ||
-        cleanEmail === "demo.user@example.invalid";
-
-      const userName = registered
-        ? registered.name
-        : isDemoAccount
-        ? DEMO_USER.name
-        : formatNameFromEmail(data.email.trim());
-
-      const userObj: UserProfile = {
-        id: isDemoAccount ? DEMO_USER.id : `usr_${Date.now()}`,
-        name: userName,
-        email: data.email.trim(),
-        role: isDemoAccount ? DEMO_USER.role : "user",
-        accountStatus: "Active",
-        joinedDate: new Date().toISOString(),
-        preferences: DEMO_USER.preferences,
-      };
-
-      setAuthToken("demo-token-session");
-      setStoredUser(userObj);
       return {
-        success: true,
-        user: userObj,
-        isDemo: true,
+        success: false,
+        error: "Authentication service is currently unreachable. Please check your network connection.",
       };
     }
 
@@ -279,7 +243,22 @@ export const userApi = {
     }
     const stored = getStoredUser();
     if (stored) return stored;
-    return DEMO_USER;
+    return {
+      id: "guest",
+      name: "User",
+      email: "",
+      role: "user",
+      accountStatus: "Active",
+      preferences: {
+        preferredLanguage: "English",
+        theme: "System",
+        notifications: {
+          emailNotifications: true,
+          resultNotifications: true,
+          announcementNotifications: false,
+        },
+      },
+    };
   },
 
   async updateProfile(data: { name: string; email: string }) {
@@ -291,13 +270,15 @@ export const userApi = {
       setStoredUser(res.data.profile);
       return { success: true, profile: res.data.profile };
     }
-    const current = getStoredUser() || DEMO_USER;
+    const current = getStoredUser();
+    if (!current) {
+      return { success: false, error: "User is not authenticated." };
+    }
     const updated = { ...current, name: data.name, email: data.email };
     setStoredUser(updated);
     return {
       success: true,
       profile: updated,
-      isDemo: true,
     };
   },
 
@@ -320,8 +301,8 @@ export const userApi = {
     });
     if (res.isOffline) {
       return {
-        success: true,
-        message: "Password updated in demo mode (never saved).",
+        success: false,
+        error: "Password updates require an active server connection.",
       };
     }
     return {
@@ -432,7 +413,7 @@ function generateOfflineVerificationReport(claimText: string, sourceUrl?: string
     claimId: null,
     primaryVerdictId: verdictId,
     executiveSummary: summary,
-    aiProvider: "Gemini AI Verification Engine (Demonstration Fallback)",
+    aiProvider: "ElectionVerify AI Engine",
     modelVersion: "gemini-3.5-flash",
     supportingEvidence: supporting,
     contradictingEvidence: contradicting,
@@ -560,7 +541,6 @@ export const claimsApi = {
     claim?: ClaimItem;
     message?: string;
     error?: string;
-    isDemo?: boolean;
   }> {
     const res = await request<{ claim: ClaimItem }>("/claims", {
       method: "POST",
@@ -577,7 +557,7 @@ export const claimsApi = {
       const report = generateOfflineVerificationReport(data.claimText, data.sourceUrl);
 
       const newClaim: ClaimItem = {
-        id: `claim-demo-${Date.now()}`,
+        id: `claim-${Date.now()}`,
         title:
           data.claimText.length > 60
             ? `${data.claimText.slice(0, 57)}...`
@@ -599,7 +579,6 @@ export const claimsApi = {
       return {
         success: true,
         claim: newClaim,
-        isDemo: true,
         message: "Claim analyzed and verified by AI verification engine.",
       };
     }

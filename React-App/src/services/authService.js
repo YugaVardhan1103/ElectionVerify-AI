@@ -5,10 +5,8 @@
  * - Enforces standard JWT Bearer token sessions
  * - Stores token securely in client storage (never passwords)
  * - Automatically revokes expired/unauthorized sessions on 401
- * - Provides graceful demo mode fallback when backend is unreachable
  */
 
-import { DEMO_USER } from "../data/mockData.js";
 import {
   request,
   setAuthToken,
@@ -24,38 +22,8 @@ import {
   validatePasswordConfirmation,
 } from "../utils/validators.js";
 
-const REGISTERED_USERS_KEY = "electionverify_registered_users";
-
-function getRegisteredUsers() {
-  if (typeof window === "undefined") return [];
-  try {
-    const item = localStorage.getItem(REGISTERED_USERS_KEY);
-    return item ? JSON.parse(item) : [];
-  } catch {
-    return [];
-  }
-}
-
-function saveRegisteredUser(user) {
-  if (typeof window === "undefined") return;
-  const list = getRegisteredUsers().filter(
-    (u) => u.email.toLowerCase() !== user.email.toLowerCase()
-  );
-  list.push(user);
-  localStorage.setItem(REGISTERED_USERS_KEY, JSON.stringify(list));
-}
-
-function formatNameFromEmail(email) {
-  const prefix = email.split("@")[0] || "User";
-  return prefix
-    .split(/[._-]/)
-    .filter(Boolean)
-    .map((s) => s.charAt(0).toUpperCase() + s.slice(1).toLowerCase())
-    .join(" ") || "User";
-}
-
 /**
- * In-memory fallback authentication state for offline/demo operation.
+ * In-memory active authentication state.
  */
 let inMemoryAuthState = {
   isAuthenticated: false,
@@ -101,53 +69,10 @@ export async function login({ email, password } = {}) {
     };
   }
 
-  // If backend server is unreachable, allow seamless demo/offline login
   if (res.isOffline) {
-    const cleanEmail = email.trim().toLowerCase();
-    const registered = getRegisteredUsers().find(
-      (u) => u.email.toLowerCase() === cleanEmail
-    );
-
-    const isDemoAccount =
-      cleanEmail === "demo.user@example.com" ||
-      cleanEmail === "demo.user@example.invalid";
-
-    const userName = registered
-      ? registered.name
-      : isDemoAccount
-      ? DEMO_USER.name
-      : formatNameFromEmail(email.trim());
-
-    const userObj = {
-      id: registered ? registered.id : isDemoAccount ? DEMO_USER.id : `usr_${Date.now()}`,
-      name: userName,
-      email: email.trim(),
-      role: isDemoAccount ? DEMO_USER.role : "user",
-      accountStatus: "Active",
-      joinedDate: new Date().toISOString(),
-      isDemoUser: true,
-      preferences: {
-        preferredLanguage: "English",
-        theme: "System",
-        notifications: {
-          emailNotifications: true,
-          resultNotifications: true,
-          announcementNotifications: false,
-        },
-      },
-    };
-
-    setAuthToken("demo-token-session");
-    setStoredUser(userObj);
-    inMemoryAuthState = {
-      isAuthenticated: true,
-      currentUser: userObj,
-    };
     return {
-      success: true,
-      user: userObj,
-      isDemo: true,
-      message: "Connected in client demo mode (backend server offline).",
+      success: false,
+      error: "Authentication service is currently unreachable. Please check your network connection.",
     };
   }
 
@@ -269,25 +194,10 @@ export async function signup({
     };
   }
 
-  // Fallback to client demo registration if backend is offline
   if (res.isOffline) {
-    const newUser = {
-      id: `usr_${Date.now()}`,
-      name: name.trim(),
-      email: email.trim(),
-      password,
-      role: "user",
-      isDemoUser: true,
-      joinedDate: new Date().toISOString(),
-    };
-    saveRegisteredUser(newUser);
-
-    // Note: Do not set session token here so user can log in on Login page
     return {
-      success: true,
-      user: newUser,
-      isDemo: true,
-      message: "Account created successfully! Please log in.",
+      success: false,
+      error: "Registration service is currently unreachable. Please check your connection or try again later.",
     };
   }
 
@@ -360,20 +270,10 @@ export async function getMe() {
 /**
  * Synchronous snapshot of authentication state.
  */
-export function getDemoAuthState() {
+export function getAuthState() {
   const storedUser = getStoredUser();
   return {
     isAuthenticated: Boolean(storedUser || inMemoryAuthState.currentUser),
-    isDemo: Boolean((storedUser || inMemoryAuthState.currentUser)?.isDemoUser),
     user: inMemoryAuthState.currentUser ? { ...inMemoryAuthState.currentUser } : storedUser,
   };
-}
-
-// Preserve backwards-compatible legacy exports
-export const demoLogin = login;
-export const demoSignup = signup;
-export const demoLogout = logout;
-export function resetDemoAuthState() {
-  clearAuthSession();
-  inMemoryAuthState = { isAuthenticated: false, currentUser: null };
 }

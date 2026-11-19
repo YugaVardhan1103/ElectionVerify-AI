@@ -72,7 +72,7 @@ export default function SubmitClaimPage() {
             Submit a statement or circulating rumor to initiate evidence retrieval and fact-checking.
           </p>
 
-          {/* Demonstration Notice */}
+          {/* Workflow Notice */}
           <div className="mt-6 rounded-lg border border-blue-200 bg-blue-50/70 p-3.5 text-xs text-blue-900 dark:border-blue-800/60 dark:bg-blue-950/40 dark:text-blue-300">
             <span className="font-semibold">Workflow Notice:</span> All new claims enter the verification lifecycle in the &quot;Under Review&quot; status. When the backend AI engine is unconfigured, claims are directed to certified human review queues without fabricating artificial verdicts.
           </div>

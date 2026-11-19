@@ -100,14 +100,14 @@ function VerificationHistory() {
           Track and inspect past claim submissions, review statuses, and verified records.
         </p>
 
-        {/* Offline Demo Notice if server is unreachable */}
+        {/* Offline Notice if server is unreachable */}
         {isOffline ? (
           <div className="mt-6">
-            <OfflineNotice message="Backend server is unreachable. Displaying baseline demonstration fixtures and local session submissions." />
+            <OfflineNotice message="Backend server is unreachable. Displaying cached verification records." />
           </div>
         ) : (
           <div className="mt-6 rounded-lg border border-emerald-200 bg-emerald-50/70 p-3.5 text-xs text-emerald-900 dark:border-emerald-800/60 dark:bg-emerald-950/40 dark:text-emerald-300">
-            <span className="font-semibold">Live Mode:</span> Connected to Shared-Backend API for historical verification records.
+            <span className="font-semibold">Connected:</span> Connected to Shared-Backend API for historical verification records.
           </div>
         )}
 
@@ -258,11 +258,6 @@ function VerificationHistory() {
                         >
                           {record.title}
                         </Link>
-                        {record.isSampleData && (
-                          <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-400">
-                            Demo
-                          </span>
-                        )}
                       </div>
 
                       <p className="line-clamp-2 text-xs text-text-secondary">
