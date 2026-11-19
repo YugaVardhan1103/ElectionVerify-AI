@@ -159,22 +159,27 @@ export async function login({ email, password } = {}) {
 
 /**
  * Sign in via OAuth / Social provider (Google, Facebook).
+ * Supports explicit account confirmation (email & name) or default demo profile.
  * Contacts Shared-Backend /api/auth/social or activates client demo session.
  *
- * @param {string} provider - "google" | "facebook"
+ * @param {string|object} options - "google" | "facebook" or { provider, email, name, avatarUrl }
  * @returns {Promise<{ success: boolean, user?: object, token?: string, error?: string, isDemo?: boolean }>}
  */
-export async function socialLogin(provider = "google") {
-  const normalizedProvider = provider.toLowerCase();
-  const providerLabel = normalizedProvider === "facebook" ? "Facebook" : "Google";
+export async function socialLogin(options = "google") {
+  const opts = typeof options === "string" ? { provider: options } : (options || {});
+  const provider = (opts.provider || "google").toLowerCase();
+  const providerLabel = provider === "facebook" ? "Facebook" : "Google";
+  const userEmail = (opts.email || `${provider}.voter@example.com`).trim().toLowerCase();
+  const userName = opts.name?.trim() || formatNameFromEmail(userEmail) || `${providerLabel} Voter`;
 
   // Try real social authentication with Shared-Backend
   const res = await request("/auth/social", {
     method: "POST",
     body: JSON.stringify({
-      provider: normalizedProvider,
-      email: `${normalizedProvider}.voter@example.com`,
-      name: `${providerLabel} Voter`,
+      provider,
+      email: userEmail,
+      name: userName,
+      avatarUrl: opts.avatarUrl,
     }),
   });
 
@@ -194,14 +199,14 @@ export async function socialLogin(provider = "google") {
 
   // Seamless offline/demo fallback
   const userObj = {
-    id: `usr_${normalizedProvider}_${Date.now()}`,
-    name: `${providerLabel} Voter`,
-    email: `${normalizedProvider}.voter@example.com`,
+    id: `usr_${provider}_${Date.now()}`,
+    name: userName,
+    email: userEmail,
     role: "user",
     accountStatus: "Active",
     joinedDate: new Date().toISOString(),
     isDemoUser: true,
-    provider: normalizedProvider,
+    provider,
     preferences: {
       preferredLanguage: "English",
       theme: "System",
@@ -213,7 +218,8 @@ export async function socialLogin(provider = "google") {
     },
   };
 
-  setAuthToken(`demo-${normalizedProvider}-token`);
+  saveRegisteredUser(userObj);
+  setAuthToken(`demo-${provider}-token`);
   setStoredUser(userObj);
   inMemoryAuthState = {
     isAuthenticated: true,
@@ -224,7 +230,7 @@ export async function socialLogin(provider = "google") {
     success: true,
     user: userObj,
     isDemo: true,
-    message: `Signed in with ${providerLabel} (client demo mode).`,
+    message: `Signed in with ${providerLabel} as ${userEmail}.`,
   };
 }
 

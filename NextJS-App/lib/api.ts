@@ -205,21 +205,25 @@ export const authApi = {
     return { success: false, error: res.error };
   },
 
-  async socialLogin(provider: string = "google"): Promise<{
+  async socialLogin(param: string | { provider?: string; email?: string; name?: string; avatarUrl?: string } = "google"): Promise<{
     success: boolean;
     user?: UserProfile;
     error?: string;
     isDemo?: boolean;
   }> {
-    const normalizedProvider = provider.toLowerCase();
-    const providerLabel = normalizedProvider === "facebook" ? "Facebook" : "Google";
+    const opts = typeof param === "string" ? { provider: param } : (param || {});
+    const provider = (opts.provider || "google").toLowerCase();
+    const providerLabel = provider === "facebook" ? "Facebook" : "Google";
+    const userEmail = (opts.email || `${provider}.voter@example.com`).trim().toLowerCase();
+    const userName = opts.name?.trim() || formatNameFromEmail(userEmail) || `${providerLabel} Voter`;
 
     const res = await request<{ user: UserProfile; token: string }>("/auth/social", {
       method: "POST",
       body: JSON.stringify({
-        provider: normalizedProvider,
-        email: `${normalizedProvider}.voter@example.com`,
-        name: `${providerLabel} Voter`,
+        provider,
+        email: userEmail,
+        name: userName,
+        avatarUrl: opts.avatarUrl,
       }),
     });
 
@@ -231,16 +235,17 @@ export const authApi = {
 
     // Offline / Demo fallback
     const userObj: UserProfile = {
-      id: `usr_${normalizedProvider}_${Date.now()}`,
-      name: `${providerLabel} Voter`,
-      email: `${normalizedProvider}.voter@example.com`,
+      id: `usr_${provider}_${Date.now()}`,
+      name: userName,
+      email: userEmail,
       role: "user",
       accountStatus: "Active",
       joinedDate: new Date().toISOString(),
       preferences: DEMO_USER.preferences,
     };
 
-    setAuthToken(`demo-${normalizedProvider}-token`);
+    saveRegisteredUser({ name: userName, email: userEmail });
+    setAuthToken(`demo-${provider}-token`);
     setStoredUser(userObj);
 
     return {
