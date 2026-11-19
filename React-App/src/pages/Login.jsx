@@ -32,8 +32,7 @@ function Login() {
   // Initialize Facebook SDK if app ID is provided
   useState(() => {
     if (typeof window !== "undefined") {
-      const fbAppId =
-        import.meta.env?.VITE_FACEBOOK_APP_ID || import.meta.env?.FACEBOOK_APP_ID;
+      const fbAppId = import.meta.env?.FACEBOOK_APP_ID;
       if (fbAppId) {
         window.fbAsyncInit = function () {
           window.FB?.init({
@@ -57,12 +56,11 @@ function Login() {
 
   const handleGoogleSignIn = () => {
     setGeneralError("");
-    const googleClientId =
-      import.meta.env?.VITE_GOOGLE_CLIENT_ID || import.meta.env?.GOOGLE_CLIENT_ID;
+    const googleClientId = import.meta.env?.GOOGLE_CLIENT_ID;
 
     if (!googleClientId) {
       setGeneralError(
-        "Google OAuth is not configured. Please add VITE_GOOGLE_CLIENT_ID (or GOOGLE_CLIENT_ID) to your .env file."
+        "Google OAuth is not configured. Please add GOOGLE_CLIENT_ID to your .env file."
       );
       return;
     }
@@ -168,12 +166,11 @@ function Login() {
 
   const handleFacebookSignIn = () => {
     setGeneralError("");
-    const facebookAppId =
-      import.meta.env?.VITE_FACEBOOK_APP_ID || import.meta.env?.FACEBOOK_APP_ID;
+    const facebookAppId = import.meta.env?.FACEBOOK_APP_ID;
 
     if (!facebookAppId) {
       setGeneralError(
-        "Facebook OAuth is not configured. Please add VITE_FACEBOOK_APP_ID (or FACEBOOK_APP_ID) to your .env file."
+        "Facebook OAuth is not configured. Please add FACEBOOK_APP_ID to your .env file."
       );
       return;
     }
