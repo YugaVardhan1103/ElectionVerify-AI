@@ -11,18 +11,76 @@ export const API_BASE_URL =
 // In-memory session claims cache for when backend server is offline
 let sessionClaims: ClaimItem[] = [];
 
+const TOKEN_KEY = "electionverify_token";
+const USER_KEY = "electionverify_user";
+const REGISTERED_USERS_KEY = "electionverify_registered_users";
+
 function getAuthToken(): string | null {
   if (typeof window === "undefined") return null;
-  return localStorage.getItem("electionverify_token");
+  return localStorage.getItem(TOKEN_KEY);
 }
 
 export function setAuthToken(token: string | null) {
   if (typeof window === "undefined") return;
   if (token) {
-    localStorage.setItem("electionverify_token", token);
+    localStorage.setItem(TOKEN_KEY, token);
   } else {
-    localStorage.removeItem("electionverify_token");
+    localStorage.removeItem(TOKEN_KEY);
   }
+}
+
+export function getStoredUser(): UserProfile | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const item = localStorage.getItem(USER_KEY);
+    return item ? JSON.parse(item) : null;
+  } catch {
+    return null;
+  }
+}
+
+export function setStoredUser(user: UserProfile | null) {
+  if (typeof window === "undefined") return;
+  if (user) {
+    localStorage.setItem(USER_KEY, JSON.stringify(user));
+  } else {
+    localStorage.removeItem(USER_KEY);
+  }
+}
+
+export function clearAuthSession() {
+  setAuthToken(null);
+  setStoredUser(null);
+}
+
+function getRegisteredUsers(): Array<{ name: string; email: string }> {
+  if (typeof window === "undefined") return [];
+  try {
+    const item = localStorage.getItem(REGISTERED_USERS_KEY);
+    return item ? JSON.parse(item) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveRegisteredUser(user: { name: string; email: string }) {
+  if (typeof window === "undefined") return;
+  const list = getRegisteredUsers().filter(
+    (u) => u.email.toLowerCase() !== user.email.toLowerCase()
+  );
+  list.push(user);
+  localStorage.setItem(REGISTERED_USERS_KEY, JSON.stringify(list));
+}
+
+function formatNameFromEmail(email: string): string {
+  const prefix = email.split("@")[0] || "User";
+  return (
+    prefix
+      .split(/[._-]/)
+      .filter(Boolean)
+      .map((s) => s.charAt(0).toUpperCase() + s.slice(1).toLowerCase())
+      .join(" ") || "User"
+  );
 }
 
 async function request<T>(
@@ -45,7 +103,7 @@ async function request<T>(
     const json = await res.json();
     if (!res.ok) {
       if (res.status === 401) {
-        setAuthToken(null);
+        clearAuthSession();
       }
       return {
         success: false,
@@ -76,22 +134,23 @@ export const authApi = {
     });
 
     if (res.success && res.data) {
-      setAuthToken(res.data.token);
+      // Do not set token so user logs in on login page
       return { success: true, user: res.data.user };
     }
 
     if (res.isOffline) {
-      // Simulate demo signup
-      const demoUser: UserProfile = {
-        id: `usr_demo_${Date.now()}`,
-        name: data.name,
-        email: data.email,
+      const newUser: UserProfile = {
+        id: `usr_${Date.now()}`,
+        name: data.name.trim(),
+        email: data.email.trim(),
         role: "user",
         accountStatus: "Active",
+        joinedDate: new Date().toISOString(),
         preferences: DEMO_USER.preferences,
       };
-      setAuthToken("demo-token-session");
-      return { success: true, user: demoUser, isDemo: true };
+      saveRegisteredUser({ name: data.name.trim(), email: data.email.trim() });
+      // Do not set auth token here so user proceeds to login page
+      return { success: true, user: newUser, isDemo: true };
     }
 
     return { success: false, error: res.error };
@@ -105,15 +164,40 @@ export const authApi = {
 
     if (res.success && res.data) {
       setAuthToken(res.data.token);
+      setStoredUser(res.data.user);
       return { success: true, user: res.data.user };
     }
 
     if (res.isOffline) {
-      // Simulate demo login
+      const cleanEmail = data.email.trim().toLowerCase();
+      const registered = getRegisteredUsers().find(
+        (u) => u.email.toLowerCase() === cleanEmail
+      );
+      const isDemoAccount =
+        cleanEmail === "demo.user@example.com" ||
+        cleanEmail === "demo.user@example.invalid";
+
+      const userName = registered
+        ? registered.name
+        : isDemoAccount
+        ? DEMO_USER.name
+        : formatNameFromEmail(data.email.trim());
+
+      const userObj: UserProfile = {
+        id: isDemoAccount ? DEMO_USER.id : `usr_${Date.now()}`,
+        name: userName,
+        email: data.email.trim(),
+        role: isDemoAccount ? DEMO_USER.role : "user",
+        accountStatus: "Active",
+        joinedDate: new Date().toISOString(),
+        preferences: DEMO_USER.preferences,
+      };
+
       setAuthToken("demo-token-session");
+      setStoredUser(userObj);
       return {
         success: true,
-        user: { ...DEMO_USER, email: data.email },
+        user: userObj,
         isDemo: true,
       };
     }
@@ -122,13 +206,20 @@ export const authApi = {
   },
 
   async getMe() {
+    const token = getAuthToken();
+    if (!token) return null;
+
     const res = await request<{ user: UserProfile }>("/auth/me");
     if (res.success && res.data) {
+      setStoredUser(res.data.user);
       return res.data.user;
     }
-    if (res.isOffline && getAuthToken()) {
-      return DEMO_USER;
+    if (res.isOffline) {
+      const stored = getStoredUser();
+      if (stored) return stored;
     }
+
+    clearAuthSession();
     return null;
   },
 
@@ -138,7 +229,7 @@ export const authApi = {
     } catch {
       // Ignore network errors during logout
     } finally {
-      setAuthToken(null);
+      clearAuthSession();
     }
   },
 };
@@ -148,8 +239,11 @@ export const userApi = {
   async getProfile(): Promise<UserProfile> {
     const res = await request<{ profile: UserProfile }>("/users/profile");
     if (res.success && res.data) {
+      setStoredUser(res.data.profile);
       return res.data.profile;
     }
+    const stored = getStoredUser();
+    if (stored) return stored;
     return DEMO_USER;
   },
 
@@ -159,11 +253,15 @@ export const userApi = {
       body: JSON.stringify(data),
     });
     if (res.success && res.data) {
+      setStoredUser(res.data.profile);
       return { success: true, profile: res.data.profile };
     }
+    const current = getStoredUser() || DEMO_USER;
+    const updated = { ...current, name: data.name, email: data.email };
+    setStoredUser(updated);
     return {
       success: true,
-      profile: { ...DEMO_USER, name: data.name, email: data.email },
+      profile: updated,
       isDemo: true,
     };
   },

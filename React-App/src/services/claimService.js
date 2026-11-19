@@ -308,3 +308,78 @@ export async function getClaimStats() {
 export function resetSessionClaims() {
   sessionSubmittedClaims = [];
 }
+
+/**
+ * Trigger automated AI verification pipeline for a claim.
+ *
+ * @param {string} claimId
+ * @returns {Promise<{ success: boolean, data?: object, error?: string }>}
+ */
+export async function triggerVerification(claimId) {
+  if (!claimId) return { success: false, error: "Claim ID is required." };
+  const res = await request(`/verification/claims/${claimId}/verify`, {
+    method: "POST",
+  });
+  return res;
+}
+
+/**
+ * Submit human expert review assessment for a claim (Reviewers & Admins only).
+ *
+ * @param {object} params
+ * @param {string} params.claimId
+ * @param {string} params.decision - "APPROVED" | "REVISED" | "REQUIRES_FURTHER_INVESTIGATION"
+ * @param {string} [params.verdictId]
+ * @param {string} [params.notes]
+ * @returns {Promise<{ success: boolean, data?: object, error?: string }>}
+ */
+export async function submitHumanReview({
+  claimId,
+  decision,
+  verdictId,
+  notes = "",
+}) {
+  if (!claimId) return { success: false, error: "Claim ID is required." };
+  const res = await request(`/verification/claims/${claimId}/review`, {
+    method: "POST",
+    body: JSON.stringify({
+      decision,
+      verdictId,
+      notes,
+    }),
+  });
+  return res;
+}
+
+/**
+ * Fetch claims queue pending human review.
+ *
+ * @param {object} [params]
+ * @param {number} [params.page=1]
+ * @param {number} [params.limit=20]
+ * @param {string} [params.reviewStatus]
+ * @returns {Promise<{ success: boolean, claims: Array<object>, pagination: object, error?: string }>}
+ */
+export async function getPendingReviews(params = {}) {
+  const query = new URLSearchParams();
+  if (params.page) query.set("page", params.page.toString());
+  if (params.limit) query.set("limit", params.limit.toString());
+  if (params.reviewStatus && params.reviewStatus !== "ALL") {
+    query.set("reviewStatus", params.reviewStatus);
+  }
+
+  const res = await request(`/verification/pending?${query.toString()}`);
+  if (res.success && res.data?.claims) {
+    return {
+      success: true,
+      claims: res.data.claims,
+      pagination: res.data.pagination,
+    };
+  }
+  return {
+    success: false,
+    claims: [],
+    pagination: { total: 0, page: 1, limit: 20, totalPages: 1 },
+    error: res.error || "Failed to load pending reviews.",
+  };
+}

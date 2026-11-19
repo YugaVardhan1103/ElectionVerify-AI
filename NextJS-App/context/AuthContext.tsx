@@ -50,8 +50,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsLoading(true);
     const res = await authApi.register(data);
     setIsLoading(false);
-    if (res.success && res.user) {
-      setUser(res.user);
+    if (res.success) {
       return { success: true };
     }
     return { success: false, error: res.error || "Registration failed" };

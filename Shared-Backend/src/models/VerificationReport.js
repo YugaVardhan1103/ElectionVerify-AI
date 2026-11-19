@@ -1,5 +1,9 @@
 import mongoose from "mongoose";
-import { CANONICAL_VERDICT_IDS } from "../config/constants.js";
+import {
+  CANONICAL_VERDICT_IDS,
+  REVIEW_STATUS,
+  REVIEW_STATUS_LIST,
+} from "../config/constants.js";
 import { EvidenceSourceSchema } from "./EvidenceSource.js";
 
 const EvidenceItemSchema = new mongoose.Schema(
@@ -53,6 +57,37 @@ const VerificationReportSchema = new mongoose.Schema(
         message: "Verdict must be one of the five canonical verdicts",
       },
       required: [true, "Verification verdict ID is required"],
+      index: true,
+    },
+    originalAiVerdictId: {
+      type: String,
+      enum: {
+        values: CANONICAL_VERDICT_IDS,
+        message: "Original AI verdict must be one of the five canonical verdicts",
+      },
+      default: function () {
+        return this.verdictId;
+      },
+      index: true,
+    },
+    finalVerdictId: {
+      type: String,
+      enum: {
+        values: CANONICAL_VERDICT_IDS,
+        message: "Final verdict must be one of the five canonical verdicts",
+      },
+      default: function () {
+        return this.verdictId;
+      },
+      index: true,
+    },
+    reviewStatus: {
+      type: String,
+      enum: {
+        values: REVIEW_STATUS_LIST,
+        message: "Invalid review status",
+      },
+      default: REVIEW_STATUS.AWAITING_REVIEW,
       index: true,
     },
     summary: {
@@ -115,9 +150,24 @@ const VerificationReportSchema = new mongoose.Schema(
         default: false,
         index: true,
       },
+      decision: {
+        type: String,
+        enum: REVIEW_STATUS_LIST,
+        default: REVIEW_STATUS.AWAITING_REVIEW,
+      },
       reviewer: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "User",
+        default: null,
+      },
+      reviewerName: {
+        type: String,
+        trim: true,
+        default: "",
+      },
+      revisedVerdictId: {
+        type: String,
+        enum: [...CANONICAL_VERDICT_IDS, null],
         default: null,
       },
       notes: {
@@ -133,6 +183,14 @@ const VerificationReportSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
+    toJSON: {
+      virtuals: true,
+      transform(doc, ret) {
+        ret.id = ret._id ? ret._id.toString() : ret.id;
+        delete ret.__v;
+        return ret;
+      },
+    },
   }
 );
 

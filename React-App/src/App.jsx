@@ -10,6 +10,7 @@ import SubmitClaim from "./pages/SubmitClaim";
 import VerificationResult from "./pages/VerificationResult";
 import VerificationHistory from "./pages/VerificationHistory";
 import Profile from "./pages/Profile";
+import ReviewerQueue from "./pages/ReviewerQueue";
 import ForgotPassword from "./pages/ForgotPassword";
 import NotFound from "./pages/NotFound";
 
@@ -69,6 +70,14 @@ function App() {
           element={
             <ProtectedRoute>
               <Profile />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/reviewer-queue"
+          element={
+            <ProtectedRoute requiredRoles={["reviewer", "admin"]}>
+              <ReviewerQueue />
             </ProtectedRoute>
           }
         />

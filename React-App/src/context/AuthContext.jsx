@@ -64,10 +64,7 @@ export function AuthProvider({ children }) {
         agreedToTerms,
       });
       setIsLoading(false);
-      if (result.success && result.user) {
-        setUser(result.user);
-        setIsDemo(Boolean(result.isDemo));
-      }
+      // Note: User is redirected to login page after signup, so we do not log them in automatically.
       return result;
     },
     []

@@ -10,11 +10,10 @@ import { USER_ROLES } from "../config/constants.js";
 
 const router = Router();
 
-// Reviewers and Admins can trigger automated verification pipelines
+// Authenticated users (claim owner, reviewers, admins) can trigger verification pipelines
 router.post(
   "/claims/:id/verify",
   requireAuth,
-  requireRole(USER_ROLES.REVIEWER, USER_ROLES.ADMIN),
   triggerVerification
 );
 

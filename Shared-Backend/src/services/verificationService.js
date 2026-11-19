@@ -8,6 +8,7 @@ import {
   CLAIM_STATUS,
   VERDICTS,
   CANONICAL_VERDICT_IDS,
+  REVIEW_STATUS,
 } from "../config/constants.js";
 
 function normalizeSourceUrl(value) {
@@ -184,6 +185,9 @@ function validateAiOutcome(aiOutcome, sources) {
   };
 }
 
+// In-flight verification tracking map to deduplicate concurrent requests for the same claim
+const activeVerifications = new Map();
+
 /**
  * ElectionVerify AI - Verification Pipeline Service
  */
@@ -197,120 +201,146 @@ export class VerificationService {
       throw error;
     }
 
-    const claim = await Claim.findById(claimId);
+    const key = claimId.toString();
 
-    if (!claim) {
-      const error = new Error(
-        `Claim not found with ID: ${claimId}`
-      );
-      error.statusCode = 404;
-      throw error;
+    // Re-use active pipeline execution to prevent duplicate concurrent runs
+    if (activeVerifications.has(key)) {
+      return await activeVerifications.get(key);
     }
 
-    claim.status = CLAIM_STATUS.IN_VERIFICATION;
-    await claim.save();
+    const executionPromise = (async () => {
+      const claim = await Claim.findById(claimId);
 
-    try {
-      // Step 1: Retrieve external evidence.
-      const retrievalResult =
-        await evidenceRetrievalService.retrieveEvidence({
+      if (!claim) {
+        const error = new Error(
+          `Claim not found with ID: ${claimId}`
+        );
+        error.statusCode = 404;
+        throw error;
+      }
+
+      claim.status = CLAIM_STATUS.IN_VERIFICATION;
+      await claim.save();
+
+      try {
+        // Step 1: Retrieve external evidence.
+        const retrievalResult =
+          await evidenceRetrievalService.retrieveEvidence({
+            claimText: claim.claimText,
+            context: claim.context,
+          });
+
+        const sources = Array.isArray(retrievalResult.sources)
+          ? retrievalResult.sources
+          : [];
+
+        // Step 2: Run AI analysis.
+        const aiProvider = getAiProvider();
+
+        const rawOutcome = await aiProvider.verifyClaim({
           claimText: claim.claimText,
           context: claim.context,
+          language: claim.language,
+          evidence: sources,
         });
 
-      const sources = Array.isArray(retrievalResult.sources)
-        ? retrievalResult.sources
-        : [];
+        // Step 3: Independently validate AI output.
+        let aiOutcome = validateAiOutcome(rawOutcome, sources);
 
-      // Step 2: Run AI analysis.
-      const aiProvider = getAiProvider();
+        // Do not allow an unconfigured provider or empty sources to produce a completed claim.
+        if (
+          !aiProvider.isConfigured() ||
+          aiOutcome.aiMetadata?.isConfigured !== true ||
+          sources.length === 0
+        ) {
+          aiOutcome = {
+            ...aiOutcome,
+            verdictId: VERDICTS.INSUFFICIENT_EVIDENCE.id,
+            summary:
+              "Automated verification could not be completed because usable evidence or an AI provider was unavailable.",
+            assessment:
+              "The claim requires review by an authorized human reviewer. No definitive automated finding has been established.",
+            supportingEvidence: [],
+            contradictingEvidence: [],
+          };
+        }
 
-      const rawOutcome = await aiProvider.verifyClaim({
-        claimText: claim.claimText,
-        context: claim.context,
-        language: claim.language,
-        evidence: sources,
-      });
+        // Step 4: Persist the verification report while strictly preserving any existing human reviews.
+        let report = await VerificationReport.findOne({
+          claim: claim._id,
+        });
 
-      // Step 3: Independently validate AI output.
-      let aiOutcome = validateAiOutcome(rawOutcome, sources);
-
-      // Do not allow an unconfigured provider to produce a completed claim.
-      if (
-        !aiProvider.isConfigured() ||
-        aiOutcome.aiMetadata?.isConfigured !== true ||
-        sources.length === 0
-      ) {
-        aiOutcome = {
-          ...aiOutcome,
-          verdictId: VERDICTS.INSUFFICIENT_EVIDENCE.id,
-          summary:
-            "Automated verification could not be completed because usable evidence or an AI provider was unavailable.",
-          assessment:
-            "The claim requires review by an authorized human reviewer. No definitive automated finding has been established.",
-          supportingEvidence: [],
-          contradictingEvidence: [],
+        const reportData = {
+          claim: claim._id,
+          verdictId: aiOutcome.verdictId,
+          originalAiVerdictId: aiOutcome.verdictId,
+          finalVerdictId: report?.humanReview?.isReviewed ? report.finalVerdictId : aiOutcome.verdictId,
+          reviewStatus: report?.humanReview?.isReviewed ? report.reviewStatus : REVIEW_STATUS.AWAITING_REVIEW,
+          summary: aiOutcome.summary,
+          assessment: aiOutcome.assessment,
+          evidenceAssessment: aiOutcome.evidenceAssessment || "",
+          supportingEvidence: aiOutcome.supportingEvidence,
+          contradictingEvidence: aiOutcome.contradictingEvidence,
+          sources,
+          aiMetadata: aiOutcome.aiMetadata,
         };
-      }
 
-      // Step 4: Persist the verification report.
-      let report = await VerificationReport.findOne({
-        claim: claim._id,
-      });
+        if (report) {
+          // If human review has already occurred, preserve its final verdict
+          if (report.humanReview?.isReviewed) {
+            reportData.verdictId = report.finalVerdictId;
+          }
+          Object.assign(report, reportData);
+          await report.save();
+        } else {
+          report = await VerificationReport.create(reportData);
+        }
 
-      const reportData = {
-        claim: claim._id,
-        verdictId: aiOutcome.verdictId,
-        summary: aiOutcome.summary,
-        assessment: aiOutcome.assessment,
-        evidenceAssessment: aiOutcome.evidenceAssessment || "",
-        supportingEvidence: aiOutcome.supportingEvidence,
-        contradictingEvidence: aiOutcome.contradictingEvidence,
-        sources,
-        aiMetadata: aiOutcome.aiMetadata,
-      };
+        // Step 5: Update claim status.
+        claim.verificationReport = report._id;
+        claim.verdictId = report.verdictId;
+        claim.reviewStatus = report.reviewStatus;
 
-      if (report) {
-        Object.assign(report, reportData);
-        await report.save();
-      } else {
-        report = await VerificationReport.create(reportData);
-      }
+        if (
+          report.verdictId ===
+          VERDICTS.INSUFFICIENT_EVIDENCE.id
+        ) {
+          claim.status = CLAIM_STATUS.UNDER_REVIEW;
+        } else {
+          claim.status = CLAIM_STATUS.COMPLETED;
+        }
 
-      // Step 5: Update claim status.
-      claim.verificationReport = report._id;
-      claim.verdictId = aiOutcome.verdictId;
+        await claim.save();
 
-      if (
-        aiOutcome.verdictId ===
-        VERDICTS.INSUFFICIENT_EVIDENCE.id
-      ) {
+        return {
+          claim,
+          report,
+        };
+      } catch (error) {
         claim.status = CLAIM_STATUS.UNDER_REVIEW;
-      } else {
-        claim.status = CLAIM_STATUS.COMPLETED;
+        await claim.save();
+        throw error;
       }
+    })();
 
-      await claim.save();
-
-      return {
-        claim,
-        report,
-      };
-    } catch (error) {
-      claim.status = CLAIM_STATUS.UNDER_REVIEW;
-      await claim.save();
-      throw error;
+    activeVerifications.set(key, executionPromise);
+    try {
+      return await executionPromise;
+    } finally {
+      activeVerifications.delete(key);
     }
   }
 
   async applyHumanReview({
     claimId,
     reviewerId,
+    reviewerName = "Authorized Reviewer",
+    decision,
     verdictId,
-    notes,
+    notes = "",
     isApproved = true,
   }) {
-    if (!CANONICAL_VERDICT_IDS.includes(verdictId)) {
+    if (verdictId && !CANONICAL_VERDICT_IDS.includes(verdictId)) {
       const error = new Error(
         `Invalid verdictId: '${verdictId}'. Must be one of [${CANONICAL_VERDICT_IDS.join(", ")}].`
       );
@@ -336,16 +366,32 @@ export class VerificationService {
       throw error;
     }
 
+    // Determine review decision
+    let effectiveDecision = decision;
+    if (!effectiveDecision) {
+      if (verdictId && claim.verdictId && verdictId !== claim.verdictId) {
+        effectiveDecision = REVIEW_STATUS.REVISED;
+      } else if (isApproved === false) {
+        effectiveDecision = REVIEW_STATUS.REVISED;
+      } else {
+        effectiveDecision = REVIEW_STATUS.APPROVED;
+      }
+    }
+
     let report = await VerificationReport.findOne({
       claim: claim._id,
     });
 
     if (!report) {
+      const fallbackVerdict = verdictId || VERDICTS.INSUFFICIENT_EVIDENCE.id;
       report = new VerificationReport({
         claim: claim._id,
-        verdictId,
-        summary: `Human review verdict: ${VERDICTS[verdictId].label}`,
-        assessment: notes,
+        verdictId: fallbackVerdict,
+        originalAiVerdictId: fallbackVerdict,
+        finalVerdictId: fallbackVerdict,
+        reviewStatus: effectiveDecision,
+        summary: `Human review verdict: ${VERDICTS[fallbackVerdict]?.label || fallbackVerdict}`,
+        assessment: notes || "Review completed by authorized human reviewer.",
         evidenceAssessment:
           "Review completed by authorized human reviewer.",
         supportingEvidence: [],
@@ -358,24 +404,49 @@ export class VerificationService {
           verificationDate: new Date(),
         },
       });
-    } else {
-      report.verdictId = verdictId;
     }
 
+    let finalVerdict = report.originalAiVerdictId || report.verdictId;
+
+    if (effectiveDecision === REVIEW_STATUS.REVISED) {
+      if (!verdictId) {
+        const error = new Error("A revised verdictId is required when revising the verification outcome.");
+        error.statusCode = 400;
+        throw error;
+      }
+      finalVerdict = verdictId;
+    } else if (effectiveDecision === REVIEW_STATUS.APPROVED) {
+      finalVerdict = verdictId || report.originalAiVerdictId || report.verdictId;
+    } else if (effectiveDecision === REVIEW_STATUS.REQUIRES_FURTHER_INVESTIGATION) {
+      finalVerdict = report.originalAiVerdictId || report.verdictId;
+    }
+
+    report.finalVerdictId = finalVerdict;
+    report.verdictId = finalVerdict;
+    report.reviewStatus = effectiveDecision;
     report.humanReview = {
       isReviewed: true,
+      decision: effectiveDecision,
       reviewer: reviewerId,
-      notes: notes.trim(),
+      reviewerName: reviewerName || "Authorized Reviewer",
+      revisedVerdictId: effectiveDecision === REVIEW_STATUS.REVISED ? verdictId : null,
+      notes: typeof notes === "string" ? notes.trim() : "",
       reviewedAt: new Date(),
     };
 
     await report.save();
 
-    claim.verdictId = verdictId;
+    claim.verdictId = finalVerdict;
     claim.verificationReport = report._id;
-    claim.status = isApproved
-      ? CLAIM_STATUS.COMPLETED
-      : CLAIM_STATUS.REJECTED;
+    claim.reviewStatus = effectiveDecision;
+
+    if (effectiveDecision === REVIEW_STATUS.REQUIRES_FURTHER_INVESTIGATION) {
+      claim.status = CLAIM_STATUS.UNDER_REVIEW;
+    } else if (isApproved === false) {
+      claim.status = CLAIM_STATUS.REJECTED;
+    } else {
+      claim.status = CLAIM_STATUS.COMPLETED;
+    }
 
     await claim.save();
 

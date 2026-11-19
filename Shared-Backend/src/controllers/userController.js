@@ -123,3 +123,42 @@ export async function listUsers(req, res, next) {
     next(error);
   }
 }
+
+/**
+ * Update User Role (Admin only)
+ * PATCH /api/users/:id/role
+ */
+export async function updateUserRole(req, res, next) {
+  try {
+    const { id } = req.params;
+    const { role } = req.body;
+
+    if (!role || !["user", "reviewer", "admin"].includes(role)) {
+      return res.status(400).json({
+        success: false,
+        error: "Invalid role specified. Must be one of: ['user', 'reviewer', 'admin'].",
+      });
+    }
+
+    const user = await User.findByIdAndUpdate(
+      id,
+      { role },
+      { new: true, runValidators: true }
+    );
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: "User not found.",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: `User role updated to ${role} successfully.`,
+      data: { user: user.toJSON() },
+    });
+  } catch (error) {
+    next(error);
+  }
+}

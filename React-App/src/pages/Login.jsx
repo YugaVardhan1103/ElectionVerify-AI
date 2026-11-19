@@ -12,22 +12,26 @@ import { validateEmail, validatePassword } from "../utils/validators.js";
  * and explicit demo-mode notices.
  */
 function Login() {
+  const location = useLocation();
   const [showPassword, setShowPassword] = useState(false);
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(() => location.state?.email || "");
   const [password, setPassword] = useState("");
   const [fieldErrors, setFieldErrors] = useState({});
   const [generalError, setGeneralError] = useState("");
+  const [successMessage, setSuccessMessage] = useState(
+    () => location.state?.successMessage || ""
+  );
   const [isLoading, setIsLoading] = useState(false);
 
   const { login } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
 
   const from = location.state?.from?.pathname || "/dashboard";
 
   async function handleSubmit(e) {
     e.preventDefault();
     setGeneralError("");
+    setSuccessMessage("");
     const errors = {};
 
     const emailVal = validateEmail(email);
@@ -76,6 +80,31 @@ function Login() {
         </div>
 
         <div className="card">
+          {successMessage && (
+            <div
+              role="status"
+              className="mb-5 rounded-lg border border-emerald-200 bg-emerald-50/80 p-3.5 text-sm text-emerald-800 dark:border-emerald-800/60 dark:bg-emerald-950/40 dark:text-emerald-300"
+            >
+              <div className="flex items-center gap-2">
+                <svg
+                  className="h-5 w-5 shrink-0 text-emerald-600 dark:text-emerald-400"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  aria-hidden="true"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+                <span>{successMessage}</span>
+              </div>
+            </div>
+          )}
+
           <form className="space-y-5" onSubmit={handleSubmit} noValidate>
             <div>
               <FormInput

@@ -58,7 +58,7 @@ export default function SignupPage() {
     setIsLoading(false);
 
     if (res.success) {
-      router.push("/dashboard");
+      router.push(`/login?registered=true&email=${encodeURIComponent(email.trim())}`);
     } else {
       setGeneralError(res.error || "Account creation failed.");
     }

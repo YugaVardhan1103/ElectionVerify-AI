@@ -83,6 +83,7 @@ Stores user-submitted or ingested election claims and lifecycle status.
 | `submittedDate` | `Date` | Yes | `Date.now` | Submission timestamp |
 | `status` | `String` | Yes | `"UNDER_REVIEW"` | `UNDER_REVIEW`, `IN_VERIFICATION`, `COMPLETED`, `REJECTED` |
 | `verdictId` | `String` | No | `null` | One of 5 canonical verdicts (null while unverified) |
+| `reviewStatus` | `String` | Yes | `"AWAITING_REVIEW"` | `AWAITING_REVIEW`, `APPROVED`, `REVISED`, `REQUIRES_FURTHER_INVESTIGATION` |
 | `categoryTags` | `[String]` | Yes | `["General Election"]` | Classification tags |
 | `verificationReport` | `ObjectId` | No | `null` | Reference to associated `VerificationReport` |
 | `createdAt`, `updatedAt` | `Date` | Auto | Auto | Timestamps |
@@ -102,7 +103,10 @@ Contains evidence assessments, citations, AI metadata, and reviewer audit trails
 |---|---|---|---|---|
 | `_id` | `ObjectId` | Yes | Auto | Unique report ID |
 | `claim` | `ObjectId` | Yes | — | Unique reference to parent `Claim` |
-| `verdictId` | `String` | Yes | — | Canonical verdict ID (`SUPPORTED`, `CONTRADICTED`, etc.) |
+| `verdictId` | `String` | Yes | — | Active canonical verdict ID (`SUPPORTED`, `CONTRADICTED`, etc.) |
+| `originalAiVerdictId` | `String` | Yes | — | Pristine canonical verdict from initial AI automated analysis |
+| `finalVerdictId` | `String` | Yes | — | Authoritative verdict reflecting human approval or revision |
+| `reviewStatus` | `String` | Yes | `"AWAITING_REVIEW"` | `AWAITING_REVIEW`, `APPROVED`, `REVISED`, `REQUIRES_FURTHER_INVESTIGATION` |
 | `summary` | `String` | Yes | — | Plain-language verdict summary |
 | `assessment` | `String` | Yes | — | Deep-dive analytical breakdown |
 | `evidenceAssessment` | `String` | No | `""` | Methodological notes on evidence reliability |
@@ -110,11 +114,14 @@ Contains evidence assessments, citations, AI metadata, and reviewer audit trails
 | `contradictingEvidence` | `[EvidenceItem]` | Yes | `[]` | Points refuting elements of the claim |
 | `sources` | `[EvidenceSource]` | Yes | `[]` | External authoritative citations |
 | `aiMetadata.provider` | `String` | Yes | `"none"` | `"gemini"`, `"openai"`, `"unconfigured"` |
-| `aiMetadata.model` | `String` | Yes | `"none"` | E.g., `"gemini-1.5-flash"`, `"gpt-4o-mini"` |
+| `aiMetadata.model` | `String` | Yes | `"none"` | E.g., `"gemini-2.5-flash"`, `"gpt-4o-mini"` |
 | `aiMetadata.executionTimeMs` | `Number` | No | `0` | Analysis pipeline duration in milliseconds |
 | `aiMetadata.isConfigured` | `Boolean` | Yes | `false` | Indicates whether live LLM was active |
 | `humanReview.isReviewed` | `Boolean` | Yes | `false` | True if verified or audited by human expert |
+| `humanReview.decision` | `String` | Yes | `"AWAITING_REVIEW"` | `"APPROVED"`, `"REVISED"`, `"REQUIRES_FURTHER_INVESTIGATION"` |
 | `humanReview.reviewer` | `ObjectId` | No | `null` | Reference to `User` with reviewer/admin role |
+| `humanReview.reviewerName` | `String` | No | `""` | Display name of reviewer |
+| `humanReview.revisedVerdictId` | `String` | No | `null` | Revised canonical verdict if decision is REVISED |
 | `humanReview.notes` | `String` | No | `""` | Official notes and statutory gazette references |
 | `humanReview.reviewedAt` | `Date` | No | `null` | Timestamp of expert review |
 

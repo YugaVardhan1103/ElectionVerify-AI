@@ -56,6 +56,15 @@ export const CLAIM_STATUS = Object.freeze({
 
 export const CLAIM_STATUS_LIST = Object.freeze(Object.values(CLAIM_STATUS));
 
+export const REVIEW_STATUS = Object.freeze({
+  AWAITING_REVIEW: "AWAITING_REVIEW",
+  APPROVED: "APPROVED",
+  REVISED: "REVISED",
+  REQUIRES_FURTHER_INVESTIGATION: "REQUIRES_FURTHER_INVESTIGATION",
+});
+
+export const REVIEW_STATUS_LIST = Object.freeze(Object.values(REVIEW_STATUS));
+
 export const USER_ROLES = Object.freeze({
   USER: "user",
   REVIEWER: "reviewer",

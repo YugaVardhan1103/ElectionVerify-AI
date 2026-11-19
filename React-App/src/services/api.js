@@ -13,6 +13,7 @@ export const API_BASE_URL =
   import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
 const TOKEN_KEY = "electionverify_token";
+const USER_KEY = "electionverify_user";
 
 export function getAuthToken() {
   if (typeof window === "undefined") return null;
@@ -26,6 +27,30 @@ export function setAuthToken(token) {
   } else {
     localStorage.removeItem(TOKEN_KEY);
   }
+}
+
+export function getStoredUser() {
+  if (typeof window === "undefined") return null;
+  try {
+    const item = localStorage.getItem(USER_KEY);
+    return item ? JSON.parse(item) : null;
+  } catch {
+    return null;
+  }
+}
+
+export function setStoredUser(user) {
+  if (typeof window === "undefined") return;
+  if (user) {
+    localStorage.setItem(USER_KEY, JSON.stringify(user));
+  } else {
+    localStorage.removeItem(USER_KEY);
+  }
+}
+
+export function clearAuthSession() {
+  setAuthToken(null);
+  setStoredUser(null);
 }
 
 /**
@@ -54,7 +79,7 @@ export async function request(endpoint, options = {}) {
     if (!res.ok) {
       // Revoke invalid / expired token on 401
       if (res.status === 401) {
-        setAuthToken(null);
+        clearAuthSession();
       }
       return {
         success: false,

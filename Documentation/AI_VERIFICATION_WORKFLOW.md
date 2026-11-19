@@ -88,3 +88,36 @@ LLM prompts are designed with strict constraints to protect democratic integrity
 2. **Grounding Requirement:** The LLM is instructed to reason **exclusively** from provided evidence. If retrieved evidence is inconclusive, it must return `INSUFFICIENT_EVIDENCE`.
 3. **No Synthetic Confidence Scores:** The system strictly prohibits numerical percentage confidence scores (e.g., "94.2% true"). Such scores convey a misleading illusion of mathematical precision. Instead, qualitative evidence categorizations (`SUPPORTED`, `CONTRADICTED`, `PARTIALLY_SUPPORTED`, `MISLEADING_CONTEXT`, `INSUFFICIENT_EVIDENCE`) are used.
 4. **Structured JSON Output:** The model is required to return a strictly typed JSON payload matching the canonical schema.
+
+---
+
+## 5. Serverless Execution & Vercel Lifecycle Constraints
+
+In serverless environments (such as Vercel Functions), unawaited background promises (`.catch(...)` running after `res.send()`) are frozen or terminated immediately upon response dispatch.
+
+To guarantee reliable execution:
+1. **Synchronous Await Guard:** When a claim is submitted, verification runs automatically with `await verificationService.runVerificationPipeline(claim._id)` bounded by a 12-second timeout guard.
+2. **Durable Persistence:** The claim is written to MongoDB *before* verification begins. If external search or AI times out, the claim remains safely persisted in `UNDER_REVIEW` state.
+3. **Concurrency Deduplication:** In-flight executions are mapped in an in-memory lock registry (`activeVerifications`). Duplicate concurrent trigger calls return the active execution promise rather than launching duplicate external API requests.
+4. **Dedicated Trigger Endpoints:** Authorized reviewers and claim authors can re-trigger verification on-demand via `POST /api/verification/claims/:id/verify`.
+
+---
+
+## 6. Dual-Verdict & Human Audit Trail Model
+
+Human reviews never overwrite, truncate, or destroy initial automated AI findings. The data model maintains full provenance:
+
+- **`originalAiVerdictId`:** Pristine canonical verdict produced by automated AI analysis.
+- **`finalVerdictId`:** Authoritative verdict reflecting human approval or revision.
+- **`reviewStatus`:** Canonical review state (`AWAITING_REVIEW`, `APPROVED`, `REVISED`, `REQUIRES_FURTHER_INVESTIGATION`).
+- **`humanReview`:** Complete audit object recording reviewer ObjectId, reviewer name, decision, revised verdict (if applicable), substantive reasoning notes, and review timestamp.
+- **`aiMetadata`:** Model name, provider identifier, latency (`executionTimeMs`), token metrics, and verification date.
+
+---
+
+## 7. Strict URL Allowlist Validation
+
+To eliminate hallucinated citations, `geminiProvider.js` and `verificationService.js` enforce an explicit URL allowlist:
+1. External search queries are executed via Tavily API (`https://api.tavily.com/search`).
+2. Retrieved source URLs are sanitized (HTTPS enforcement, stripping tracking query parameters).
+3. Only URLs that exist in the retrieved search results are accepted as evidence citations. Any synthetic or unrecognized URLs are rejected, and unverifiable verdicts automatically fall back to `INSUFFICIENT_EVIDENCE`.

@@ -7,8 +7,8 @@ import { useAuth } from "../context/useAuth.js";
  * Verifies authentication state. Renders loading indicator during session initialization,
  * and redirects unauthenticated users to /login with return location state.
  */
-function ProtectedRoute({ children }) {
-  const { isAuthenticated, isLoading } = useAuth();
+function ProtectedRoute({ children, requiredRoles = [] }) {
+  const { isAuthenticated, user, isLoading } = useAuth();
   const location = useLocation();
 
   if (isLoading) {
@@ -21,6 +21,10 @@ function ProtectedRoute({ children }) {
 
   if (!isAuthenticated) {
     return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  if (requiredRoles.length > 0 && (!user || !requiredRoles.includes(user.role))) {
+    return <Navigate to="/dashboard" replace />;
   }
 
   return children;

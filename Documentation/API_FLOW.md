@@ -321,8 +321,8 @@ Base API Endpoint: `http://localhost:5000/api`
 
 ### 5.1 Trigger Pipeline
 - **Route:** `POST /api/verification/claims/:id/verify`
-- **Access:** Role: `reviewer` or `admin`
-- **Description:** Executes search retrieval and AI reasoning. If external keys are absent, generates transparent unconfigured notice.
+- **Access:** Authenticated (Claim Submitter, Reviewer, or Admin)
+- **Description:** Executes search retrieval via Tavily and semantic reasoning via Gemini. Uses in-flight deduplication to prevent duplicate concurrent runs.
 
 ### 5.2 Submit Human Expert Review
 - **Route:** `POST /api/verification/claims/:id/review`
@@ -330,9 +330,31 @@ Base API Endpoint: `http://localhost:5000/api`
 - **Request Body:**
 ```json
 {
+  "decision": "REVISED",
   "verdictId": "CONTRADICTED",
-  "notes": "Verified against the State Election Commission Gazette Notification No. SEC-2026/89. Official voter registration closed strictly on Nov 10, 2026.",
-  "isApproved": true
+  "notes": "Verified against the State Election Commission Gazette Notification No. SEC-2026/89. Official voter registration closed strictly on Nov 10, 2026."
 }
 ```
-- **Success Response (200 OK):** Updates the claim's verdict and attaches reviewer notes and timestamps.
+- **Supported Decisions:**
+  - `"APPROVED"`: Accepts original AI verdict without modification.
+  - `"REVISED"`: Sets a new canonical verdict while strictly preserving `originalAiVerdictId`.
+  - `"REQUIRES_FURTHER_INVESTIGATION"`: Flags claim as `UNDER_REVIEW` pending secondary evidence.
+- **Success Response (200 OK):** Updates the claim's final verdict and attaches reviewer identity, decision, notes, and timestamp.
+
+### 5.3 List Pending Reviews
+- **Route:** `GET /api/verification/pending`
+- **Access:** Role: `reviewer` or `admin`
+- **Supported Query Parameters:**
+  - `page`: Integer (defaults to 1)
+  - `limit`: Integer (defaults to 20)
+  - `reviewStatus`: String (`ALL` | `AWAITING_REVIEW` | `REQUIRES_FURTHER_INVESTIGATION`)
+- **Success Response (200 OK):**
+```json
+{
+  "success": true,
+  "data": {
+    "claims": [ ... ],
+    "pagination": { "total": 12, "page": 1, "limit": 20, "totalPages": 1 }
+  }
+}
+```

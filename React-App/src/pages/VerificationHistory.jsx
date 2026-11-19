@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import Button from "../components/Button";
 import Card from "../components/Card";
@@ -30,38 +30,44 @@ function VerificationHistory() {
   const [isOffline, setIsOffline] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  const fetchHistory = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const [res, statsData] = await Promise.all([
-        getClaims({
-          page,
-          limit: 10,
-          searchTerm,
-          status: selectedStatus,
-          verdictId: selectedVerdict,
-        }),
-        getClaimStats(),
-      ]);
-
-      setClaims(res.claims || []);
-      setPagination(
-        res.pagination || { total: 0, page: 1, limit: 10, totalPages: 1 }
-      );
-      setStats(statsData);
-      if (res.isOffline) {
-        setIsOffline(true);
-      }
-    } catch (err) {
-      console.error("Failed to load claims history:", err);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [page, searchTerm, selectedStatus, selectedVerdict]);
-
   useEffect(() => {
-    fetchHistory();
-  }, [fetchHistory]);
+    let isMounted = true;
+    async function loadData() {
+      try {
+        const [res, statsData] = await Promise.all([
+          getClaims({
+            page,
+            limit: 10,
+            searchTerm,
+            status: selectedStatus,
+            verdictId: selectedVerdict,
+          }),
+          getClaimStats(),
+        ]);
+
+        if (!isMounted) return;
+        setClaims(res.claims || []);
+        setPagination(
+          res.pagination || { total: 0, page: 1, limit: 10, totalPages: 1 }
+        );
+        setStats(statsData);
+        if (res.isOffline) {
+          setIsOffline(true);
+        }
+      } catch (err) {
+        if (!isMounted) return;
+        console.error("Failed to load claims history:", err);
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    }
+    loadData();
+    return () => {
+      isMounted = false;
+    };
+  }, [page, searchTerm, selectedStatus, selectedVerdict]);
 
   function formatDate(isoString) {
     if (!isoString) return "Recent";

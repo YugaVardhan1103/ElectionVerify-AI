@@ -79,7 +79,12 @@ function Signup() {
     setIsLoading(false);
 
     if (result.success) {
-      navigate("/dashboard");
+      navigate("/login", {
+        state: {
+          successMessage: "Account created successfully! Please log in with your credentials.",
+          email: email.trim(),
+        },
+      });
     } else {
       setGeneralError(result.error || "Signup failed.");
     }

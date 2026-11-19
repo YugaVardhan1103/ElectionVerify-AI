@@ -59,6 +59,15 @@ describe("1. Canonical Verification & Lifecycle Constants", () => {
     assert.equal(USER_ROLES.REVIEWER, "reviewer");
     assert.equal(USER_ROLES.ADMIN, "admin");
   });
+
+  it("should define review statuses including awaiting, approved, revised, and requires investigation", async () => {
+    const { REVIEW_STATUS, REVIEW_STATUS_LIST } = await import("../src/config/constants.js");
+    assert.equal(REVIEW_STATUS_LIST.length, 4);
+    assert.equal(REVIEW_STATUS.AWAITING_REVIEW, "AWAITING_REVIEW");
+    assert.equal(REVIEW_STATUS.APPROVED, "APPROVED");
+    assert.equal(REVIEW_STATUS.REVISED, "REVISED");
+    assert.equal(REVIEW_STATUS.REQUIRES_FURTHER_INVESTIGATION, "REQUIRES_FURTHER_INVESTIGATION");
+  });
 });
 
 
@@ -335,6 +344,132 @@ describe("4. Express App & Routing", () => {
         statusCode: 400,
       }
     );
+  });
+
+  it("should preserve original AI verdict and record complete human review audit on revision", async () => {
+    const { claimService } = await import("../src/services/claimService.js");
+    const { verificationService } = await import("../src/services/verificationService.js");
+    const { Claim } = await import("../src/models/Claim.js");
+    const { VerificationReport } = await import("../src/models/VerificationReport.js");
+
+    const claim = await claimService.submitClaim({
+      claimText: "Special audit test claim for preserving AI and human review history.",
+      context: "Official Election Verification Test Run",
+    });
+
+    try {
+      // Create initial report representing AI outcome
+      const initialReport = await VerificationReport.create({
+        claim: claim._id,
+        verdictId: "INSUFFICIENT_EVIDENCE",
+        originalAiVerdictId: "INSUFFICIENT_EVIDENCE",
+        finalVerdictId: "INSUFFICIENT_EVIDENCE",
+        reviewStatus: "AWAITING_REVIEW",
+        summary: "Initial automated AI assessment summary.",
+        assessment: "Initial automated assessment details.",
+        supportingEvidence: [],
+        contradictingEvidence: [],
+        sources: [],
+        aiMetadata: {
+          provider: "gemini",
+          model: "gemini-2.5-flash",
+          executionTimeMs: 450,
+          tokenUsage: { prompt: 100, completion: 50, total: 150 },
+          isConfigured: true,
+          verificationDate: new Date(),
+        },
+      });
+
+      claim.verificationReport = initialReport._id;
+      claim.verdictId = initialReport.verdictId;
+      await claim.save();
+
+      // Human Reviewer revises the verdict
+      const reviewerId = new (await import("mongoose")).default.Types.ObjectId();
+      const reviewResult = await verificationService.applyHumanReview({
+        claimId: claim._id.toString(),
+        reviewerId,
+        reviewerName: "Chief Election Auditor",
+        decision: "REVISED",
+        verdictId: "CONTRADICTED",
+        notes: "Contradicted by the official Election Commission gazette publication.",
+      });
+
+      // Assert that original AI verdict is untouched while final verdict and audit reflect revision
+      assert.equal(reviewResult.report.originalAiVerdictId, "INSUFFICIENT_EVIDENCE");
+      assert.equal(reviewResult.report.finalVerdictId, "CONTRADICTED");
+      assert.equal(reviewResult.report.verdictId, "CONTRADICTED");
+      assert.equal(reviewResult.report.reviewStatus, "REVISED");
+      assert.equal(reviewResult.report.humanReview.isReviewed, true);
+      assert.equal(reviewResult.report.humanReview.decision, "REVISED");
+      assert.equal(reviewResult.report.humanReview.reviewerName, "Chief Election Auditor");
+      assert.equal(reviewResult.report.humanReview.revisedVerdictId, "CONTRADICTED");
+      assert.ok(reviewResult.report.humanReview.notes.includes("official Election Commission gazette"));
+
+      // Assert AI summary, assessment, and metadata were not wiped
+      assert.equal(reviewResult.report.summary, "Initial automated AI assessment summary.");
+      assert.equal(reviewResult.report.aiMetadata.provider, "gemini");
+
+      // Assert Claim document reflects the revised verdict and status
+      assert.equal(reviewResult.claim.verdictId, "CONTRADICTED");
+      assert.equal(reviewResult.claim.status, "COMPLETED");
+      assert.equal(reviewResult.claim.reviewStatus, "REVISED");
+
+      // Test "REQUIRES_FURTHER_INVESTIGATION"
+      const investigationResult = await verificationService.applyHumanReview({
+        claimId: claim._id.toString(),
+        reviewerId,
+        reviewerName: "Chief Election Auditor",
+        decision: "REQUIRES_FURTHER_INVESTIGATION",
+        notes: "Awaiting local precinct signed ledger logs.",
+      });
+
+      assert.equal(investigationResult.claim.status, "UNDER_REVIEW");
+      assert.equal(investigationResult.claim.reviewStatus, "REQUIRES_FURTHER_INVESTIGATION");
+      assert.equal(investigationResult.report.humanReview.decision, "REQUIRES_FURTHER_INVESTIGATION");
+    } finally {
+      await VerificationReport.deleteMany({ claim: claim._id });
+      await Claim.deleteOne({ _id: claim._id });
+    }
+  });
+
+  it("should enforce role-based access control on human review endpoint", async () => {
+    const { User } = await import("../src/models/User.js");
+    const mongoose = (await import("mongoose")).default;
+
+    const fakeClaimId = new mongoose.Types.ObjectId();
+    const testUser = await User.create({
+      name: "Standard Citizen User",
+      email: `standard-${Date.now()}@example.com`,
+      password: "Password123!",
+      role: "user",
+    });
+
+    try {
+      const userToken = testUser.generateAuthToken();
+
+      const res = await fetch(
+        `http://127.0.0.1:${port}/api/verification/claims/${fakeClaimId}/review`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${userToken}`,
+          },
+          body: JSON.stringify({
+            verdictId: "SUPPORTED",
+            notes: "Attempted unauthorized review",
+          }),
+        }
+      );
+
+      assert.equal(res.status, 403);
+      const data = await res.json();
+      assert.equal(data.success, false);
+      assert.ok(data.error.includes("Forbidden") || data.error.includes("role"));
+    } finally {
+      await User.deleteOne({ _id: testUser._id });
+    }
   });
 
   it("should close test HTTP server and MongoDB connection", async () => {

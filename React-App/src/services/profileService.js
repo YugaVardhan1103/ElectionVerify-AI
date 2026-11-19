@@ -7,7 +7,7 @@
  */
 
 import { DEMO_USER } from "../data/mockData.js";
-import { request } from "./api.js";
+import { request, getStoredUser, setStoredUser } from "./api.js";
 import {
   validateName,
   validateEmail,
@@ -16,21 +16,44 @@ import {
 } from "../utils/validators.js";
 
 /**
- * In-memory profile state for offline / demo mode.
+ * Helper to build an active profile from stored user or defaults
  */
-let inMemoryProfile = {
-  id: DEMO_USER.id,
-  name: DEMO_USER.name,
-  email: DEMO_USER.email,
-  role: DEMO_USER.role,
-  accountStatus: DEMO_USER.accountStatus,
-  joinedDate: DEMO_USER.joinedDate,
-  preferences: {
-    preferredLanguage: DEMO_USER.preferences.preferredLanguage,
-    theme: DEMO_USER.preferences.theme,
-    notifications: { ...DEMO_USER.preferences.notifications },
-  },
-};
+function resolveCurrentProfile() {
+  const stored = getStoredUser();
+  if (stored) {
+    return {
+      id: stored.id || DEMO_USER.id,
+      name: stored.name || "User",
+      email: stored.email || "",
+      role: stored.role || "user",
+      accountStatus: stored.accountStatus || "Active",
+      joinedDate: stored.joinedDate || new Date().toISOString(),
+      preferences: stored.preferences || {
+        preferredLanguage: "English",
+        theme: "System",
+        notifications: {
+          emailNotifications: true,
+          resultNotifications: true,
+          announcementNotifications: false,
+        },
+      },
+    };
+  }
+
+  return {
+    id: DEMO_USER.id,
+    name: DEMO_USER.name,
+    email: DEMO_USER.email,
+    role: DEMO_USER.role,
+    accountStatus: DEMO_USER.accountStatus,
+    joinedDate: DEMO_USER.joinedDate,
+    preferences: {
+      preferredLanguage: DEMO_USER.preferences.preferredLanguage,
+      theme: DEMO_USER.preferences.theme,
+      notifications: { ...DEMO_USER.preferences.notifications },
+    },
+  };
+}
 
 /**
  * Retrieve user profile from Shared-Backend API or local session fallback.
@@ -48,8 +71,9 @@ export async function getProfile() {
     };
   }
 
+  const profile = resolveCurrentProfile();
   return {
-    ...inMemoryProfile,
+    ...profile,
     isDemo: true,
   };
 }
@@ -82,24 +106,31 @@ export async function updateProfile({ name, email } = {}) {
   });
 
   if (res.success && res.data?.profile) {
+    const updated = {
+      ...res.data.profile,
+      id: res.data.profile.id || res.data.profile._id,
+    };
+    setStoredUser(updated);
     return {
       success: true,
-      profile: res.data.profile,
+      profile: updated,
       message: res.data.message || "Profile updated successfully.",
     };
   }
 
   if (res.isOffline) {
-    inMemoryProfile = {
-      ...inMemoryProfile,
+    const current = resolveCurrentProfile();
+    const updated = {
+      ...current,
       name: name.trim(),
       email: email.trim(),
     };
+    setStoredUser(updated);
     return {
       success: true,
       isDemo: true,
-      profile: inMemoryProfile,
-      message: "Profile updated in client session memory (backend offline).",
+      profile: updated,
+      message: "Profile updated successfully.",
     };
   }
 
@@ -129,18 +160,23 @@ export async function updatePreferences(preferences = {}) {
   }
 
   if (res.isOffline) {
-    inMemoryProfile.preferences = {
-      ...inMemoryProfile.preferences,
-      ...preferences,
-      notifications: {
-        ...inMemoryProfile.preferences.notifications,
-        ...(preferences.notifications || {}),
+    const current = resolveCurrentProfile();
+    const updated = {
+      ...current,
+      preferences: {
+        ...current.preferences,
+        ...preferences,
+        notifications: {
+          ...current.preferences.notifications,
+          ...(preferences.notifications || {}),
+        },
       },
     };
+    setStoredUser(updated);
     return {
       success: true,
       isDemo: true,
-      message: "Preferences updated in client session (backend offline).",
+      message: "Preferences updated successfully.",
     };
   }
 

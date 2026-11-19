@@ -4,6 +4,8 @@ import {
   CLAIM_STATUS_LIST,
   CANONICAL_VERDICT_IDS,
   SUPPORTED_LANGUAGES,
+  REVIEW_STATUS,
+  REVIEW_STATUS_LIST,
 } from "../config/constants.js";
 
 const ClaimSchema = new mongoose.Schema(
@@ -67,6 +69,15 @@ const ClaimSchema = new mongoose.Schema(
         message: "Verdict must be one of the five canonical verdicts or null",
       },
       default: null,
+      index: true,
+    },
+    reviewStatus: {
+      type: String,
+      enum: {
+        values: REVIEW_STATUS_LIST,
+        message: "Invalid review status",
+      },
+      default: REVIEW_STATUS.AWAITING_REVIEW,
       index: true,
     },
     categoryTags: {

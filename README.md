@@ -47,10 +47,13 @@ Election-related misinformation, rumor cascades, and manipulated media can disto
 - Stateless JWT authentication signed with HMAC-SHA256 and bcrypt password hashing (12 salt rounds).
 - Role-Based Access Control (RBAC) supporting `user`, `reviewer`, and `admin` permissions.
 - Pluggable Multi-Provider AI Architecture:
-  - **Google Gemini Provider:** Leverages `gemini-1.5-flash` for high-throughput semantic analysis.
-  - **OpenAI Provider:** Structured JSON reasoning using `gpt-4o-mini`.
+  - **Google Gemini Provider:** High-throughput semantic analysis and reasoning using Google Gemini.
+  - **Tavily Evidence Search:** Multi-source external web search targeting statutory election authorities, gazettes, and fact-checking organizations.
+  - **OpenAI Provider:** Structured JSON reasoning alternative.
   - **Unconfigured Provider:** Safe fallback that returns `INSUFFICIENT_EVIDENCE` with an administrative notice when API keys are absent, eliminating crashes and hallucinations.
-- Evidence Retrieval Service with automated domain trust classification (`election_authority`, `fact_checker`, `news_media`).
+- Serverless-Ready Verification Pipeline: Synchronous await with 12s timeout guard ensuring compatibility with Vercel serverless execution constraints.
+- In-flight concurrency deduplication preventing duplicate API executions.
+- Dual-Verdict & Reviewer Audit Trail preserving original AI output while recording human review decisions (`APPROVED`, `REVISED`, `REQUIRES_FURTHER_INVESTIGATION`).
 - Built-in rate limiting (`express-rate-limit`) and Helmet security headers.
 
 ---

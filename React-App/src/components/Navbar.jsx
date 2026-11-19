@@ -17,7 +17,7 @@ import { useAuth } from "../context/useAuth.js";
 function Navbar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { resolvedTheme, toggleTheme } = useTheme();
-  const { isAuthenticated, logout } = useAuth();
+  const { isAuthenticated, user, logout } = useAuth();
   const navigate = useNavigate();
 
   const getLinkClass = ({ isActive }) =>
@@ -78,6 +78,11 @@ function Navbar() {
               <NavLink to="/profile" className={getLinkClass}>
                 Profile
               </NavLink>
+              {(user?.role === "reviewer" || user?.role === "admin") && (
+                <NavLink to="/reviewer-queue" className={getLinkClass}>
+                  Review Queue
+                </NavLink>
+              )}
               <button
                 type="button"
                 onClick={handleLogout}
@@ -286,6 +291,15 @@ function Navbar() {
                 >
                   Profile
                 </NavLink>
+                {(user?.role === "reviewer" || user?.role === "admin") && (
+                  <NavLink
+                    to="/reviewer-queue"
+                    onClick={closeMobileMenu}
+                    className={getLinkClass}
+                  >
+                    Review Queue
+                  </NavLink>
+                )}
                 <button
                   type="button"
                   onClick={handleLogout}

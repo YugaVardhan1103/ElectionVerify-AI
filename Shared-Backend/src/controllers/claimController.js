@@ -19,18 +19,42 @@ export async function submitClaim(req, res, next) {
       categoryTags,
     });
 
-    // Optionally trigger background verification pipeline asynchronously if requested
-    const autoVerify = req.query.autoVerify === "true";
+    // Automatically run verification pipeline synchronously to comply with Vercel serverless lifecycle,
+    // avoiding unawaited background promises that freeze upon response termination.
+    const autoVerify = req.query.autoVerify !== "false" && req.body.autoVerify !== false;
+    let verificationResult = null;
+
     if (autoVerify) {
-      verificationService.runVerificationPipeline(claim._id).catch((err) => {
-        console.error(`[Background Verification] Failed for claim ${claim._id}:`, err);
-      });
+      try {
+        // Enforce a 12-second serverless timeout guard so slow network searches do not block HTTP response
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("Verification pipeline timed out")), 12000)
+        );
+
+        verificationResult = await Promise.race([
+          verificationService.runVerificationPipeline(claim._id),
+          timeoutPromise,
+        ]);
+      } catch (pipelineErr) {
+        // Log notice; the claim is already persisted safely in MongoDB with status UNDER_REVIEW
+        console.warn(
+          `[Verification Notice] Automated verification deferred for claim ${claim._id}:`,
+          pipelineErr.message
+        );
+      }
     }
+
+    const responseClaim = verificationResult ? verificationResult.claim : claim;
 
     res.status(201).json({
       success: true,
-      message: "Claim submitted successfully for verification.",
-      data: { claim },
+      message: verificationResult
+        ? "Claim submitted and verified successfully."
+        : "Claim submitted successfully. Verification is in progress.",
+      data: {
+        claim: responseClaim,
+        report: verificationResult ? verificationResult.report : null,
+      },
     });
   } catch (error) {
     next(error);
