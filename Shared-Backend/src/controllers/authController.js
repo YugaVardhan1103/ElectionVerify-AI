@@ -39,6 +39,25 @@ export async function login(req, res, next) {
 }
 
 /**
+ * Handle Social Sign-In (Google / Facebook)
+ * POST /api/auth/social
+ */
+export async function socialLogin(req, res, next) {
+  try {
+    const { provider, email, name, avatarUrl } = req.body;
+    const result = await authService.socialLogin({ provider, email, name, avatarUrl });
+
+    res.status(200).json({
+      success: true,
+      message: `${provider || "Social"} authentication successful.`,
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
  * Handle User Logout
  * POST /api/auth/logout
  */

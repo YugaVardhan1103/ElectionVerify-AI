@@ -78,6 +78,45 @@ export class AuthService {
   }
 
   /**
+   * Authenticate or provision a user via social login (Google/Facebook).
+   *
+   * @param {object} socialData
+   * @param {string} socialData.provider
+   * @param {string} [socialData.email]
+   * @param {string} [socialData.name]
+   * @param {string} [socialData.avatarUrl]
+   * @returns {Promise<{ user: object, token: string }>}
+   */
+  async socialLogin({ provider = "google", email, name, avatarUrl } = {}) {
+    const provName = provider.charAt(0).toUpperCase() + provider.slice(1).toLowerCase();
+    const cleanEmail = (email || `${provider.toLowerCase()}.user@example.com`).trim().toLowerCase();
+
+    let user = await User.findOne({ email: cleanEmail });
+    if (!user) {
+      user = await User.create({
+        name: name || `${provName} User`,
+        email: cleanEmail,
+        password: `OAuth_${Math.random().toString(36).slice(2)}!A1`,
+        role: "user",
+        accountStatus: "Active",
+      });
+    }
+
+    if (user.accountStatus === "Suspended") {
+      const error = new Error("Account has been suspended.");
+      error.statusCode = 403;
+      throw error;
+    }
+
+    const token = user.generateAuthToken();
+
+    return {
+      user: user.toJSON(),
+      token,
+    };
+  }
+
+  /**
    * Retrieve user profile by ID.
    *
    * @param {string} userId

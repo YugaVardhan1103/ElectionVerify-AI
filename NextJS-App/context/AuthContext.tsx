@@ -9,6 +9,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (credentials: { email: string; password: string }) => Promise<{ success: boolean; error?: string }>;
+  socialLogin: (provider?: string) => Promise<{ success: boolean; error?: string }>;
   register: (data: { name: string; email: string; password: string }) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void> | void;
 }
@@ -46,6 +47,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return { success: false, error: res.error || "Login failed" };
   }, []);
 
+  const socialLogin = useCallback(async (provider: string = "google") => {
+    setIsLoading(true);
+    const res = await authApi.socialLogin(provider);
+    setIsLoading(false);
+    if (res.success && res.user) {
+      setUser(res.user);
+      return { success: true };
+    }
+    return { success: false, error: res.error || "Social login failed" };
+  }, []);
+
   const register = useCallback(async (data: { name: string; email: string; password: string }) => {
     setIsLoading(true);
     const res = await authApi.register(data);
@@ -67,10 +79,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       isAuthenticated: Boolean(user),
       isLoading,
       login,
+      socialLogin,
       register,
       logout,
     }),
-    [user, isLoading, login, register, logout]
+    [user, isLoading, login, socialLogin, register, logout]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

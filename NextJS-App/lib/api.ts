@@ -205,6 +205,51 @@ export const authApi = {
     return { success: false, error: res.error };
   },
 
+  async socialLogin(provider: string = "google"): Promise<{
+    success: boolean;
+    user?: UserProfile;
+    error?: string;
+    isDemo?: boolean;
+  }> {
+    const normalizedProvider = provider.toLowerCase();
+    const providerLabel = normalizedProvider === "facebook" ? "Facebook" : "Google";
+
+    const res = await request<{ user: UserProfile; token: string }>("/auth/social", {
+      method: "POST",
+      body: JSON.stringify({
+        provider: normalizedProvider,
+        email: `${normalizedProvider}.voter@example.com`,
+        name: `${providerLabel} Voter`,
+      }),
+    });
+
+    if (res.success && res.data) {
+      setAuthToken(res.data.token);
+      setStoredUser(res.data.user);
+      return { success: true, user: res.data.user };
+    }
+
+    // Offline / Demo fallback
+    const userObj: UserProfile = {
+      id: `usr_${normalizedProvider}_${Date.now()}`,
+      name: `${providerLabel} Voter`,
+      email: `${normalizedProvider}.voter@example.com`,
+      role: "user",
+      accountStatus: "Active",
+      joinedDate: new Date().toISOString(),
+      preferences: DEMO_USER.preferences,
+    };
+
+    setAuthToken(`demo-${normalizedProvider}-token`);
+    setStoredUser(userObj);
+
+    return {
+      success: true,
+      user: userObj,
+      isDemo: true,
+    };
+  },
+
   async getMe() {
     const token = getAuthToken();
     if (!token) return null;

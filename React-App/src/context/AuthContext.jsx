@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { AuthContext } from "./AuthContext.js";
 import {
   login as apiLogin,
+  socialLogin as apiSocialLogin,
   signup as apiSignup,
   logout as apiLogout,
   getMe,
@@ -53,6 +54,17 @@ export function AuthProvider({ children }) {
     return result;
   }, []);
 
+  const socialLogin = useCallback(async (provider = "google") => {
+    setIsLoading(true);
+    const result = await apiSocialLogin(provider);
+    setIsLoading(false);
+    if (result.success && result.user) {
+      setUser(result.user);
+      setIsDemo(Boolean(result.isDemo));
+    }
+    return result;
+  }, []);
+
   const signup = useCallback(
     async ({ name, email, password, confirmPassword, agreedToTerms } = {}) => {
       setIsLoading(true);
@@ -84,10 +96,11 @@ export function AuthProvider({ children }) {
       isLoading,
       isDemo,
       login,
+      socialLogin,
       signup,
       logout,
     }),
-    [user, isLoading, isDemo, login, signup, logout]
+    [user, isLoading, isDemo, login, socialLogin, signup, logout]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
