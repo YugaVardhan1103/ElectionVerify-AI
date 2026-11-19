@@ -334,6 +334,22 @@ export const userApi = {
       error: res.error,
     };
   },
+
+  async getSavedClaims(): Promise<{ success: boolean; savedClaims: ClaimItem[]; error?: string }> {
+    const res = await request<{ savedClaims: ClaimItem[] }>("/users/saved-claims");
+    if (res.success && res.data) {
+      return { success: true, savedClaims: res.data.savedClaims };
+    }
+    return { success: false, savedClaims: [], error: res.error };
+  },
+
+  async saveClaim(claimId: string): Promise<{ success: boolean; message?: string; error?: string }> {
+    return request(`/users/saved-claims/${claimId}`, { method: "POST" });
+  },
+
+  async removeSavedClaim(claimId: string): Promise<{ success: boolean; message?: string; error?: string }> {
+    return request(`/users/saved-claims/${claimId}`, { method: "DELETE" });
+  },
 };
 
 function getUserClaimsKey(userId: string | null) {
@@ -455,6 +471,7 @@ export const claimsApi = {
     status?: string;
     verdictId?: string;
     language?: string;
+    mine?: boolean;
   } = {}) {
     const params = new URLSearchParams();
     if (query.page) params.set("page", query.page.toString());
@@ -463,6 +480,7 @@ export const claimsApi = {
     if (query.status && query.status !== "ALL") params.set("status", query.status);
     if (query.verdictId && query.verdictId !== "ALL") params.set("verdictId", query.verdictId);
     if (query.language && query.language !== "ALL") params.set("language", query.language);
+    if (query.mine) params.set("mine", "true");
 
     const res = await request<{
       claims: ClaimItem[];
@@ -481,7 +499,7 @@ export const claimsApi = {
     const user = getStoredUser();
     const userId = user ? user.id || user.email : null;
     const userClaims = userId ? getStoredUserClaims(userId) : [];
-    const all = [...userClaims, ...BASELINE_SAMPLE_CLAIMS];
+    const all = query.mine ? userClaims : [...userClaims, ...BASELINE_SAMPLE_CLAIMS];
     const filtered = all.filter((c) => {
       const matchSearch =
         !query.searchTerm ||
@@ -511,15 +529,19 @@ export const claimsApi = {
     };
   },
 
-  async getClaimStats(): Promise<ClaimStats> {
-    const res = await request<{ stats: ClaimStats }>("/claims/stats");
+  async getClaimStats(options: { scope?: string } = {}): Promise<ClaimStats & { userStats?: any }> {
+    const url = options.scope === "user" ? "/claims/stats?scope=user" : "/claims/stats";
+    const res = await request<{ stats: ClaimStats; userStats?: any }>(url);
     if (res.success && res.data) {
-      return res.data.stats;
+      return {
+        ...res.data.stats,
+        userStats: res.data.userStats,
+      };
     }
     const user = getStoredUser();
     const userId = user ? user.id || user.email : null;
     const userClaims = userId ? getStoredUserClaims(userId) : [];
-    const all = [...userClaims, ...BASELINE_SAMPLE_CLAIMS];
+    const all = options.scope === "user" ? userClaims : [...userClaims, ...BASELINE_SAMPLE_CLAIMS];
     return {
       totalClaims: all.length,
       completedVerifications: all.filter((c) => c.status === "COMPLETED").length,
@@ -533,7 +555,25 @@ export const claimsApi = {
         MISLEADING_CONTEXT: all.filter((c) => c.verdictId === "MISLEADING_CONTEXT").length,
         INSUFFICIENT_EVIDENCE: all.filter((c) => c.verdictId === "INSUFFICIENT_EVIDENCE").length,
       },
+      userStats: {
+        totalClaims: userClaims.length,
+        completedVerifications: userClaims.filter((c) => c.status === "COMPLETED").length,
+        underReview: userClaims.filter((c) => c.status === "UNDER_REVIEW").length,
+      },
     };
+  },
+
+  async updateClaim(id: string, updates: Partial<ClaimItem>): Promise<{ success: boolean; claim?: ClaimItem; error?: string }> {
+    return request(`/claims/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(updates),
+    });
+  },
+
+  async deleteClaim(id: string): Promise<{ success: boolean; message?: string; error?: string }> {
+    return request(`/claims/${id}`, {
+      method: "DELETE",
+    });
   },
 
   async getClaimById(id: string): Promise<ClaimItem | null> {

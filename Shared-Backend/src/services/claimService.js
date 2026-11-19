@@ -1,5 +1,7 @@
 import mongoose from "mongoose";
 import { Claim } from "../models/Claim.js";
+import { VerificationReport } from "../models/VerificationReport.js";
+import { User } from "../models/User.js";
 import { CLAIM_STATUS, VERDICTS } from "../config/constants.js";
 
 /**
@@ -16,6 +18,7 @@ export class ClaimService {
    * @param {string} [params.context=""]
    * @param {string} [params.userId=null]
    * @param {Array<string>} [params.categoryTags]
+   * @param {boolean} [params.isPublic=false]
    * @returns {Promise<object>} Created claim
    */
   async submitClaim({
@@ -25,6 +28,7 @@ export class ClaimService {
     context = "",
     userId = null,
     categoryTags = [],
+    isPublic = false,
   }) {
     const trimmed = claimText.trim();
     const title =
@@ -42,6 +46,7 @@ export class ClaimService {
       language,
       context: context ? context.trim() : "",
       submittedBy: userId || null,
+      isPublic: Boolean(isPublic),
       status: CLAIM_STATUS.UNDER_REVIEW,
       verdictId: null, // Claims enter lifecycle without verdict
       categoryTags: defaultTags,
@@ -51,9 +56,10 @@ export class ClaimService {
   }
 
   /**
-   * Retrieve claims with filtering, search, and pagination.
+   * Retrieve claims with filtering, search, pagination, and strict multi-user data isolation.
    *
    * @param {object} queryOptions
+   * @param {object|null} currentUser
    * @returns {Promise<{ claims: Array<object>, pagination: object }>}
    */
   async getClaims(queryOptions = {}, currentUser = null) {
@@ -85,24 +91,49 @@ export class ClaimService {
       filter.language = queryOptions.language;
     }
 
-    // Submitter account isolation: prevent users from seeing other accounts' in-progress submissions
-    if (queryOptions.submittedBy && mongoose.isValidObjectId(queryOptions.submittedBy)) {
-      conditions.push({ submittedBy: queryOptions.submittedBy });
-    } else if (currentUser && currentUser.role !== "admin" && currentUser.role !== "reviewer") {
-      conditions.push({
-        $or: [
-          { submittedBy: currentUser._id },
-          { status: CLAIM_STATUS.COMPLETED },
-          { submittedBy: null },
-        ],
-      });
-    } else if (!currentUser) {
-      conditions.push({
-        $or: [
-          { status: CLAIM_STATUS.COMPLETED },
-          { submittedBy: null },
-        ],
-      });
+    const isMineOnly =
+      queryOptions.mine === "true" ||
+      queryOptions.mine === true ||
+      queryOptions.scope === "user";
+
+    if (isMineOnly) {
+      // User-specific history: strictly authenticated user's records
+      if (!currentUser) {
+        return {
+          claims: [],
+          pagination: {
+            total: 0,
+            page,
+            limit,
+            totalPages: 1,
+            hasNextPage: false,
+            hasPrevPage: false,
+          },
+        };
+      }
+      conditions.push({ submittedBy: currentUser._id });
+    } else if (currentUser && (currentUser.role === "admin" || currentUser.role === "reviewer")) {
+      // Authorized Reviewer / Admin view: can inspect all submissions, or filter by specific submitter
+      if (queryOptions.submittedBy && mongoose.isValidObjectId(queryOptions.submittedBy)) {
+        conditions.push({ submittedBy: queryOptions.submittedBy });
+      }
+    } else if (currentUser) {
+      // Regular Authenticated User: public registry claims + their own private submissions ONLY
+      // Prevent IDOR: if client attempts ?submittedBy=<other_user_id>, enforce ownership
+      if (queryOptions.submittedBy && queryOptions.submittedBy !== currentUser._id.toString()) {
+        conditions.push({ submittedBy: currentUser._id });
+      } else {
+        conditions.push({
+          $or: [
+            { isPublic: true },
+            { submittedBy: currentUser._id },
+          ],
+        });
+      }
+    } else {
+      // Unauthenticated Guests: strictly public verified claims ONLY
+      // Safely isolates unowned / private data from exposure
+      conditions.push({ isPublic: true });
     }
 
     if (conditions.length > 0) {
@@ -139,38 +170,246 @@ export class ClaimService {
 
   /**
    * Retrieve a single claim by its MongoDB ID with full verification report.
+   * Enforces data isolation: private claims are only accessible to the submitter or reviewers/admins.
    *
    * @param {string} id
+   * @param {object|null} currentUser
    * @returns {Promise<object|null>}
    */
-  async getClaimById(id) {
+  async getClaimById(id, currentUser = null) {
     if (!id || typeof id !== "string") return null;
     const cleanId = id.trim();
     if (!mongoose.isValidObjectId(cleanId)) {
       return null;
     }
+
     const claim = await Claim.findById(cleanId).populate("verificationReport").lean();
-    if (claim) {
-      claim.id = claim._id ? claim._id.toString() : claim.id;
+    if (!claim) return null;
+
+    claim.id = claim._id ? claim._id.toString() : claim.id;
+
+    // Multi-user ownership & visibility enforcement
+    const isPublic = claim.isPublic === true;
+    const isPrivileged =
+      currentUser &&
+      (currentUser.role === "admin" || currentUser.role === "reviewer");
+    const isOwner =
+      currentUser &&
+      claim.submittedBy &&
+      claim.submittedBy.toString() === currentUser._id.toString();
+
+    // Prevent IDOR: private claims are inaccessible to other users / guests
+    if (!isPublic && !isPrivileged && !isOwner) {
+      return null; // Controller returns 404 to hide resource existence
     }
+
     return claim;
   }
 
   /**
-   * Derive aggregate verification and processing metrics.
+   * Update claim details with ownership enforcement.
    *
+   * @param {string} id
+   * @param {object} updates
+   * @param {object} currentUser
    * @returns {Promise<object>}
    */
-  async getClaimStats() {
+  async updateClaim(id, updates = {}, currentUser) {
+    if (!id || typeof id !== "string") {
+      const err = new Error("Invalid claim identifier.");
+      err.statusCode = 400;
+      throw err;
+    }
+    const cleanId = id.trim();
+    if (!mongoose.isValidObjectId(cleanId)) {
+      const err = new Error("Invalid claim identifier format.");
+      err.statusCode = 400;
+      throw err;
+    }
+
+    const claim = await Claim.findById(cleanId);
+    if (!claim) {
+      const err = new Error("Claim not found.");
+      err.statusCode = 404;
+      throw err;
+    }
+
+    const isPrivileged = currentUser && currentUser.role === "admin";
+    const isOwner =
+      currentUser &&
+      claim.submittedBy &&
+      claim.submittedBy.toString() === currentUser._id.toString();
+
+    if (!isPrivileged && !isOwner) {
+      const err = new Error("You are not authorized to modify this claim.");
+      err.statusCode = 403;
+      throw err;
+    }
+
+    const allowedFields = [
+      "title",
+      "claimText",
+      "sourceUrl",
+      "context",
+      "categoryTags",
+      "language",
+    ];
+
+    for (const key of allowedFields) {
+      if (updates[key] !== undefined) {
+        claim[key] = updates[key];
+      }
+    }
+
+    // Only admins may alter the public publication status
+    if (isPrivileged && updates.isPublic !== undefined) {
+      claim.isPublic = Boolean(updates.isPublic);
+    }
+
+    await claim.save();
+    return claim;
+  }
+
+  /**
+   * Delete a claim with ownership enforcement.
+   *
+   * @param {string} id
+   * @param {object} currentUser
+   * @returns {Promise<{ success: boolean, message: string }>}
+   */
+  async deleteClaim(id, currentUser) {
+    if (!id || typeof id !== "string") {
+      const err = new Error("Invalid claim identifier.");
+      err.statusCode = 400;
+      throw err;
+    }
+    const cleanId = id.trim();
+    if (!mongoose.isValidObjectId(cleanId)) {
+      const err = new Error("Invalid claim identifier format.");
+      err.statusCode = 400;
+      throw err;
+    }
+
+    const claim = await Claim.findById(cleanId);
+    if (!claim) {
+      const err = new Error("Claim not found.");
+      err.statusCode = 404;
+      throw err;
+    }
+
+    const isPrivileged = currentUser && currentUser.role === "admin";
+    const isOwner =
+      currentUser &&
+      claim.submittedBy &&
+      claim.submittedBy.toString() === currentUser._id.toString();
+
+    if (!isPrivileged && !isOwner) {
+      const err = new Error("You are not authorized to delete this claim.");
+      err.statusCode = 403;
+      throw err;
+    }
+
+    // Delete associated verification report if present
+    if (claim.verificationReport) {
+      await VerificationReport.findByIdAndDelete(claim.verificationReport);
+    }
+
+    // Remove from all user saved claims
+    await User.updateMany(
+      { savedClaims: cleanId },
+      { $pull: { savedClaims: cleanId } }
+    );
+
+    await Claim.findByIdAndDelete(cleanId);
+    return { success: true, message: "Claim deleted successfully." };
+  }
+
+  /**
+   * Derive aggregate verification and processing metrics with optional user scope.
+   *
+   * @param {object|null} currentUser
+   * @param {string} [scope="platform"]
+   * @returns {Promise<object>}
+   */
+  async getClaimStats(currentUser = null, scope = "platform") {
+    const isUserScope = scope === "user" || scope === "mine";
+
+    if (isUserScope) {
+      if (!currentUser) {
+        return {
+          totalClaims: 0,
+          completedVerifications: 0,
+          underReview: 0,
+          inVerification: 0,
+          rejected: 0,
+          byVerdict: {
+            SUPPORTED: 0,
+            CONTRADICTED: 0,
+            PARTIALLY_SUPPORTED: 0,
+            MISLEADING_CONTEXT: 0,
+            INSUFFICIENT_EVIDENCE: 0,
+          },
+        };
+      }
+
+      const userFilter = { submittedBy: currentUser._id };
+      const [totalClaims, completed, underReview, inVerification, rejected, verdictCounts] =
+        await Promise.all([
+          Claim.countDocuments(userFilter),
+          Claim.countDocuments({ ...userFilter, status: CLAIM_STATUS.COMPLETED }),
+          Claim.countDocuments({ ...userFilter, status: CLAIM_STATUS.UNDER_REVIEW }),
+          Claim.countDocuments({ ...userFilter, status: CLAIM_STATUS.IN_VERIFICATION }),
+          Claim.countDocuments({ ...userFilter, status: CLAIM_STATUS.REJECTED }),
+          Claim.aggregate([
+            { $match: { submittedBy: currentUser._id, verdictId: { $ne: null } } },
+            { $group: { _id: "$verdictId", count: { $sum: 1 } } },
+          ]),
+        ]);
+
+      const byVerdict = {
+        SUPPORTED: 0,
+        CONTRADICTED: 0,
+        PARTIALLY_SUPPORTED: 0,
+        MISLEADING_CONTEXT: 0,
+        INSUFFICIENT_EVIDENCE: 0,
+      };
+
+      verdictCounts.forEach((v) => {
+        if (byVerdict[v._id] !== undefined) {
+          byVerdict[v._id] = v.count;
+        }
+      });
+
+      return {
+        totalClaims,
+        completedVerifications: completed,
+        underReview,
+        inVerification,
+        rejected,
+        byVerdict,
+      };
+    }
+
+    // Platform-wide / Public metrics
+    const publicFilter =
+      currentUser && (currentUser.role === "admin" || currentUser.role === "reviewer")
+        ? {}
+        : { isPublic: true };
+
     const [totalClaims, completed, underReview, inVerification, rejected, verdictCounts] =
       await Promise.all([
-        Claim.countDocuments(),
-        Claim.countDocuments({ status: CLAIM_STATUS.COMPLETED }),
-        Claim.countDocuments({ status: CLAIM_STATUS.UNDER_REVIEW }),
-        Claim.countDocuments({ status: CLAIM_STATUS.IN_VERIFICATION }),
-        Claim.countDocuments({ status: CLAIM_STATUS.REJECTED }),
+        Claim.countDocuments(publicFilter),
+        Claim.countDocuments({ ...publicFilter, status: CLAIM_STATUS.COMPLETED }),
+        Claim.countDocuments({ ...publicFilter, status: CLAIM_STATUS.UNDER_REVIEW }),
+        Claim.countDocuments({ ...publicFilter, status: CLAIM_STATUS.IN_VERIFICATION }),
+        Claim.countDocuments({ ...publicFilter, status: CLAIM_STATUS.REJECTED }),
         Claim.aggregate([
-          { $match: { verdictId: { $ne: null } } },
+          {
+            $match: {
+              ...(publicFilter.isPublic !== undefined ? { isPublic: true } : {}),
+              verdictId: { $ne: null },
+            },
+          },
           { $group: { _id: "$verdictId", count: { $sum: 1 } } },
         ]),
       ]);

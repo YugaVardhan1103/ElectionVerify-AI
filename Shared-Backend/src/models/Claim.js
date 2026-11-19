@@ -48,6 +48,11 @@ const ClaimSchema = new mongoose.Schema(
       default: null,
       index: true,
     },
+    isPublic: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
     submittedDate: {
       type: Date,
       default: Date.now,

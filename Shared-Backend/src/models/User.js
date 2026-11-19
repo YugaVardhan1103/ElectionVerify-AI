@@ -88,6 +88,12 @@ const UserSchema = new mongoose.Schema(
       type: Date,
       default: Date.now,
     },
+    savedClaims: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Claim",
+      },
+    ],
   },
   {
     timestamps: true,

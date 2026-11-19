@@ -9,6 +9,10 @@ export async function submitClaim(req, res, next) {
   try {
     const { claimText, sourceUrl, language, context, categoryTags } = req.body;
     const userId = req.user ? req.user._id : null;
+    const isPublic =
+      req.body.isPublic === true &&
+      req.user &&
+      (req.user.role === "admin" || req.user.role === "reviewer");
 
     const claim = await claimService.submitClaim({
       claimText,
@@ -17,6 +21,7 @@ export async function submitClaim(req, res, next) {
       context,
       userId,
       categoryTags,
+      isPublic,
     });
 
     // Automatically run verification pipeline synchronously to comply with Vercel serverless lifecycle,
@@ -83,10 +88,16 @@ export async function getClaims(req, res, next) {
  */
 export async function getClaimStats(req, res, next) {
   try {
-    const stats = await claimService.getClaimStats();
+    const scope = req.query.scope || (req.query.mine === "true" ? "user" : "platform");
+    const stats = await claimService.getClaimStats(req.user, scope);
+    const userStats = req.user ? await claimService.getClaimStats(req.user, "user") : null;
+
     res.status(200).json({
       success: true,
-      data: { stats },
+      data: {
+        stats,
+        userStats,
+      },
     });
   } catch (error) {
     next(error);
@@ -94,12 +105,12 @@ export async function getClaimStats(req, res, next) {
 }
 
 /**
- * Get Claim Details by ID
+ * Get Claim Details by ID (enforces visibility & ownership)
  * GET /api/claims/:id
  */
 export async function getClaimById(req, res, next) {
   try {
-    const claim = await claimService.getClaimById(req.params.id);
+    const claim = await claimService.getClaimById(req.params.id, req.user);
     if (!claim) {
       return res.status(404).json({
         success: false,
@@ -111,6 +122,36 @@ export async function getClaimById(req, res, next) {
       success: true,
       data: { claim },
     });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * Update Claim Details (owner or admin only)
+ * PUT /api/claims/:id
+ */
+export async function updateClaim(req, res, next) {
+  try {
+    const claim = await claimService.updateClaim(req.params.id, req.body, req.user);
+    res.status(200).json({
+      success: true,
+      message: "Claim updated successfully.",
+      data: { claim },
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * Delete a Claim (owner or admin only)
+ * DELETE /api/claims/:id
+ */
+export async function deleteClaim(req, res, next) {
+  try {
+    const result = await claimService.deleteClaim(req.params.id, req.user);
+    res.status(200).json(result);
   } catch (error) {
     next(error);
   }

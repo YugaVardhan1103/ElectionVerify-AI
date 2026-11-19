@@ -10,12 +10,15 @@ import StatusBadge from "@/components/StatusBadge";
 import OfflineNotice from "@/components/OfflineNotice";
 import { VERDICT_LIST } from "@/constants/verdicts";
 import { claimsApi } from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
 import { ClaimItem, ClaimStats } from "@/types";
 
 export default function VerificationHistoryPage() {
+  const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedStatus, setSelectedStatus] = useState("ALL");
   const [selectedVerdict, setSelectedVerdict] = useState("ALL");
+  const [viewScope, setViewScope] = useState<"all" | "mine">("all");
   const [page, setPage] = useState(1);
 
   const [claims, setClaims] = useState<ClaimItem[]>([]);
@@ -39,8 +42,9 @@ export default function VerificationHistoryPage() {
           searchTerm,
           status: selectedStatus,
           verdictId: selectedVerdict,
+          mine: viewScope === "mine",
         }),
-        claimsApi.getClaimStats(),
+        claimsApi.getClaimStats({ scope: viewScope === "mine" ? "user" : "platform" }),
       ]);
 
       setClaims(res.claims || []);
@@ -52,7 +56,7 @@ export default function VerificationHistoryPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [page, searchTerm, selectedStatus, selectedVerdict]);
+  }, [page, searchTerm, selectedStatus, selectedVerdict, viewScope]);
 
   useEffect(() => {
     fetchHistory();
@@ -89,6 +93,33 @@ export default function VerificationHistoryPage() {
           <p className="mt-2 text-sm text-text-secondary">
             Inspect previous election claim submissions, check review statuses, and review findings.
           </p>
+
+          {user && (
+            <div className="mt-4 flex gap-2">
+              <button
+                type="button"
+                onClick={() => { setViewScope("all"); setPage(1); }}
+                className={`rounded-lg px-3.5 py-1.5 text-xs font-semibold transition-colors ${
+                  viewScope === "all"
+                    ? "bg-brand-600 text-white dark:bg-brand-500"
+                    : "border border-border bg-surface text-text-secondary hover:text-text-primary"
+                }`}
+              >
+                Public Claims & Registry
+              </button>
+              <button
+                type="button"
+                onClick={() => { setViewScope("mine"); setPage(1); }}
+                className={`rounded-lg px-3.5 py-1.5 text-xs font-semibold transition-colors ${
+                  viewScope === "mine"
+                    ? "bg-brand-600 text-white dark:bg-brand-500"
+                    : "border border-border bg-surface text-text-secondary hover:text-text-primary"
+                }`}
+              >
+                My Submissions
+              </button>
+            </div>
+          )}
 
           {isOffline && (
             <div className="mt-6">

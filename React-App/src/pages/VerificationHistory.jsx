@@ -4,6 +4,7 @@ import Button from "../components/Button";
 import Card from "../components/Card";
 import StatusBadge from "../components/StatusBadge";
 import OfflineNotice from "../components/OfflineNotice";
+import { useAuth } from "../context/useAuth.js";
 import { getClaims, getClaimStats } from "../services/claimService.js";
 import { VERDICT_LIST, getVerdictById } from "../constants/verdicts.js";
 
@@ -14,9 +15,11 @@ import { VERDICT_LIST, getVerdictById } from "../constants/verdicts.js";
  * Integrates directly with the Shared-Backend API with seamless offline fallback.
  */
 function VerificationHistory() {
+  const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedStatus, setSelectedStatus] = useState("ALL");
   const [selectedVerdict, setSelectedVerdict] = useState("ALL");
+  const [viewScope, setViewScope] = useState("all");
   const [page, setPage] = useState(1);
 
   const [claims, setClaims] = useState([]);
@@ -41,8 +44,9 @@ function VerificationHistory() {
             searchTerm,
             status: selectedStatus,
             verdictId: selectedVerdict,
+            mine: viewScope === "mine",
           }),
-          getClaimStats(),
+          getClaimStats({ scope: viewScope === "mine" ? "user" : "platform" }),
         ]);
 
         if (!isMounted) return;
@@ -67,7 +71,7 @@ function VerificationHistory() {
     return () => {
       isMounted = false;
     };
-  }, [page, searchTerm, selectedStatus, selectedVerdict]);
+  }, [page, searchTerm, selectedStatus, selectedVerdict, viewScope]);
 
   function formatDate(isoString) {
     if (!isoString) return "Recent";
@@ -99,6 +103,33 @@ function VerificationHistory() {
         <p className="mt-2 text-text-secondary">
           Track and inspect past claim submissions, review statuses, and verified records.
         </p>
+
+        {user && (
+          <div className="mt-4 flex gap-2">
+            <button
+              type="button"
+              onClick={() => { setViewScope("all"); setPage(1); }}
+              className={`rounded-lg px-3.5 py-1.5 text-xs font-semibold transition-colors ${
+                viewScope === "all"
+                  ? "bg-brand-600 text-white dark:bg-brand-500"
+                  : "border border-border bg-surface text-text-secondary hover:text-text-primary"
+              }`}
+            >
+              Public Claims & Registry
+            </button>
+            <button
+              type="button"
+              onClick={() => { setViewScope("mine"); setPage(1); }}
+              className={`rounded-lg px-3.5 py-1.5 text-xs font-semibold transition-colors ${
+                viewScope === "mine"
+                  ? "bg-brand-600 text-white dark:bg-brand-500"
+                  : "border border-border bg-surface text-text-secondary hover:text-text-primary"
+              }`}
+            >
+              My Submissions
+            </button>
+          </div>
+        )}
 
         {/* Offline Notice if server is unreachable */}
         {isOffline ? (

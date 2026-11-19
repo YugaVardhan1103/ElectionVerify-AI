@@ -1,5 +1,7 @@
+import mongoose from "mongoose";
 import { authService } from "../services/authService.js";
 import { User } from "../models/User.js";
+import { Claim } from "../models/Claim.js";
 
 /**
  * Get Profile of Authenticated User
@@ -157,6 +159,110 @@ export async function updateUserRole(req, res, next) {
       success: true,
       message: `User role updated to ${role} successfully.`,
       data: { user: user.toJSON() },
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * Retrieve saved / bookmarked claims for authenticated user
+ * GET /api/users/saved-claims
+ */
+export async function getSavedClaims(req, res, next) {
+  try {
+    const user = await User.findById(req.user._id)
+      .populate({
+        path: "savedClaims",
+        populate: { path: "verificationReport" },
+      })
+      .lean();
+
+    if (!user) {
+      return res.status(404).json({ success: false, error: "User not found." });
+    }
+
+    // Filter accessible claims: public or owned by user or privileged reviewer/admin
+    const accessibleClaims = (user.savedClaims || []).filter((claim) => {
+      if (!claim) return false;
+      if (claim.isPublic) return true;
+      if (req.user.role === "admin" || req.user.role === "reviewer") return true;
+      return (
+        claim.submittedBy &&
+        claim.submittedBy.toString() === req.user._id.toString()
+      );
+    });
+
+    res.status(200).json({
+      success: true,
+      data: { savedClaims: accessibleClaims },
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * Save / Bookmark a claim for authenticated user
+ * POST /api/users/saved-claims/:claimId
+ */
+export async function saveClaim(req, res, next) {
+  try {
+    const { claimId } = req.params;
+    if (!mongoose.isValidObjectId(claimId)) {
+      return res.status(400).json({ success: false, error: "Invalid claim ID format." });
+    }
+
+    const claim = await Claim.findById(claimId);
+    if (!claim) {
+      return res.status(404).json({ success: false, error: "Claim not found." });
+    }
+
+    const isPublic = claim.isPublic === true;
+    const isOwner =
+      claim.submittedBy &&
+      claim.submittedBy.toString() === req.user._id.toString();
+    const isPrivileged =
+      req.user.role === "admin" || req.user.role === "reviewer";
+
+    // Disallow saving another user's private claim
+    if (!isPublic && !isOwner && !isPrivileged) {
+      return res.status(404).json({ success: false, error: "Claim not found." });
+    }
+
+    await User.findByIdAndUpdate(req.user._id, {
+      $addToSet: { savedClaims: claimId },
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "Claim saved successfully.",
+      data: { claimId },
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * Remove a saved / bookmarked claim for authenticated user
+ * DELETE /api/users/saved-claims/:claimId
+ */
+export async function removeSavedClaim(req, res, next) {
+  try {
+    const { claimId } = req.params;
+    if (!mongoose.isValidObjectId(claimId)) {
+      return res.status(400).json({ success: false, error: "Invalid claim ID format." });
+    }
+
+    await User.findByIdAndUpdate(req.user._id, {
+      $pull: { savedClaims: claimId },
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "Claim removed from saved items.",
+      data: { claimId },
     });
   } catch (error) {
     next(error);

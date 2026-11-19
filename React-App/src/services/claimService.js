@@ -248,6 +248,7 @@ export async function getClaims(options = {}) {
     language = "ALL",
     page = 1,
     limit = 10,
+    mine = false,
   } = options;
 
   const params = new URLSearchParams();
@@ -257,6 +258,7 @@ export async function getClaims(options = {}) {
   if (status && status !== "ALL") params.set("status", status);
   if (verdictId && verdictId !== "ALL") params.set("verdictId", verdictId);
   if (language && language !== "ALL") params.set("language", language);
+  if (mine) params.set("mine", "true");
 
   const res = await request(`/claims?${params.toString()}`);
 
@@ -281,7 +283,7 @@ export async function getClaims(options = {}) {
   const user = getStoredUser();
   const userId = user ? user.id || user.email : null;
   const userClaims = userId ? getStoredUserClaims(userId) : [];
-  const allClaims = [...userClaims, ...SAMPLE_CLAIMS];
+  const allClaims = mine ? userClaims : [...userClaims, ...SAMPLE_CLAIMS];
   const query = typeof searchTerm === "string" ? searchTerm.trim().toLowerCase() : "";
   const targetVerdict = typeof verdictId === "string" ? verdictId.trim().toUpperCase() : "ALL";
   const targetStatus = typeof status === "string" ? status.trim().toUpperCase() : "ALL";
@@ -380,15 +382,20 @@ export async function getVerificationReport(claimId) {
 }
 
 /**
- * Fetch aggregate claim metrics from backend API.
+ * Fetch aggregate claim metrics from backend API with optional user scope.
  *
+ * @param {object} [options]
+ * @param {string} [options.scope="platform"]
  * @returns {Promise<object>}
  */
-export async function getClaimStats() {
-  const res = await request("/claims/stats");
+export async function getClaimStats(options = {}) {
+  const { scope = "platform" } = options;
+  const url = scope === "user" ? "/claims/stats?scope=user" : "/claims/stats";
+  const res = await request(url);
   if (res.success && res.data?.stats) {
     return {
       ...res.data.stats,
+      userStats: res.data.userStats || null,
       isOffline: false,
     };
   }
@@ -397,7 +404,7 @@ export async function getClaimStats() {
   const user = getStoredUser();
   const userId = user ? user.id || user.email : null;
   const userClaims = userId ? getStoredUserClaims(userId) : [];
-  const allClaims = [...userClaims, ...SAMPLE_CLAIMS];
+  const allClaims = scope === "user" ? userClaims : [...userClaims, ...SAMPLE_CLAIMS];
   return {
     totalClaims: allClaims.length,
     completedVerifications: allClaims.filter(
@@ -421,8 +428,71 @@ export async function getClaimStats() {
         (c) => c.verdictId === "INSUFFICIENT_EVIDENCE"
       ).length,
     },
+    userStats: {
+      totalClaims: userClaims.length,
+      completedVerifications: userClaims.filter((c) => c.status === CLAIM_STATUS.COMPLETED).length,
+      underReview: userClaims.filter((c) => c.status === CLAIM_STATUS.UNDER_REVIEW).length,
+    },
     isOffline: true,
   };
+}
+
+/**
+ * Update an existing claim (owner or admin only).
+ */
+export async function updateClaim(claimId, updates) {
+  if (!claimId) return { success: false, error: "Claim ID is required." };
+  return request(`/claims/${claimId}`, {
+    method: "PUT",
+    body: JSON.stringify(updates),
+  });
+}
+
+/**
+ * Delete a claim (owner or admin only).
+ */
+export async function deleteClaim(claimId) {
+  if (!claimId) return { success: false, error: "Claim ID is required." };
+  return request(`/claims/${claimId}`, {
+    method: "DELETE",
+  });
+}
+
+/**
+ * Retrieve saved / bookmarked claims for authenticated user.
+ */
+export async function getSavedClaims() {
+  const res = await request("/users/saved-claims");
+  if (res.success && res.data?.savedClaims) {
+    return {
+      success: true,
+      savedClaims: res.data.savedClaims.map((c) => ({
+        ...c,
+        id: c.id || c._id,
+      })),
+    };
+  }
+  return { success: false, savedClaims: [], error: res.error };
+}
+
+/**
+ * Save / Bookmark a claim for authenticated user.
+ */
+export async function saveClaim(claimId) {
+  if (!claimId) return { success: false, error: "Claim ID is required." };
+  return request(`/users/saved-claims/${claimId}`, {
+    method: "POST",
+  });
+}
+
+/**
+ * Remove a saved / bookmarked claim for authenticated user.
+ */
+export async function removeSavedClaim(claimId) {
+  if (!claimId) return { success: false, error: "Claim ID is required." };
+  return request(`/users/saved-claims/${claimId}`, {
+    method: "DELETE",
+  });
 }
 
 /**
