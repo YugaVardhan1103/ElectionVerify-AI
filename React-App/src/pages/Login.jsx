@@ -67,6 +67,34 @@ function Login() {
 
     setSocialLoading("google");
 
+    // Helper to identify user cancellations, closed popups, or denied consent
+    const isCancellation = (err, desc) => {
+      const combined = `${err || ""} ${desc || ""}`.toLowerCase();
+      return (
+        combined.includes("access_denied") ||
+        combined.includes("popup_closed") ||
+        combined.includes("closed_by_user") ||
+        combined.includes("user_cancel") ||
+        combined.includes("cancelled") ||
+        combined.includes("canceled") ||
+        combined.includes("denied") ||
+        combined.includes("consent") ||
+        combined.includes("immediate_failed")
+      );
+    };
+
+    // Safety timeout: automatically reset loading spinner if no response after 60s
+    let timeoutTimer = setTimeout(() => {
+      setSocialLoading(null);
+    }, 60000);
+
+    const clearAllTimers = () => {
+      if (timeoutTimer) {
+        clearTimeout(timeoutTimer);
+        timeoutTimer = null;
+      }
+    };
+
     // 1. Preferred: Google Identity Services (GIS) Token Client
     if (window.google?.accounts?.oauth2) {
       try {
@@ -74,31 +102,63 @@ function Login() {
           client_id: googleClientId,
           scope: "openid email profile",
           prompt: "select_account",
+          error_callback: (err) => {
+            clearAllTimers();
+            // Stop loading spinner immediately
+            setSocialLoading(null);
+            // If user closed popup, clicked Cancel, or denied consent: return to login without error
+            if (err?.type && isCancellation(err.type, err.message)) {
+              return;
+            }
+            if (err?.type === "popup_failed_to_open") {
+              setGeneralError(
+                "Popup was blocked by your browser. Please allow popups for this site."
+              );
+            } else if (err?.message) {
+              setGeneralError(err.message);
+            }
+          },
           callback: async (tokenResponse) => {
+            clearAllTimers();
+            // Handle error response from Google OAuth
             if (tokenResponse.error) {
+              // Stop loading spinner immediately
               setSocialLoading(null);
-              if (tokenResponse.error !== "popup_closed_by_user") {
-                setGeneralError(tokenResponse.error_description || "Google sign-in was cancelled.");
+              // When user closes popup, clicks Cancel, or denies consent:
+              // Return to login page without showing an error or redirecting
+              if (isCancellation(tokenResponse.error, tokenResponse.error_description)) {
+                return;
               }
+              // Display other OAuth errors
+              setGeneralError(
+                tokenResponse.error_description || tokenResponse.error || "Google sign-in failed."
+              );
               return;
             }
 
-            const result = await socialLogin({
-              provider: "google",
-              accessToken: tokenResponse.access_token,
-            });
+            // Successful token response: proceed with authentication
+            try {
+              const result = await socialLogin({
+                provider: "google",
+                accessToken: tokenResponse.access_token,
+              });
 
-            setSocialLoading(null);
-            if (result.success) {
-              navigate(from, { replace: true });
-            } else {
-              setGeneralError(result.error || "Google authentication failed.");
+              setSocialLoading(null);
+              if (result.success) {
+                navigate(from, { replace: true });
+              } else {
+                setGeneralError(result.error || "Google authentication failed.");
+              }
+            } catch {
+              setSocialLoading(null);
+              setGeneralError("Authentication error occurred. Please try again.");
             }
           },
         });
         tokenClient.requestAccessToken({ prompt: "select_account" });
         return;
       } catch (err) {
+        clearAllTimers();
         console.warn("GIS token client error, falling back to popup redirect:", err);
       }
     }
@@ -120,48 +180,76 @@ function Login() {
     );
 
     if (!popup) {
+      clearAllTimers();
       setSocialLoading(null);
       setGeneralError("Popup was blocked by your browser. Please allow popups for this site.");
       return;
     }
 
+    let pollTimer = null;
+
+    const cleanup = () => {
+      clearAllTimers();
+      if (pollTimer) {
+        clearInterval(pollTimer);
+        pollTimer = null;
+      }
+      window.removeEventListener("message", handleMessage);
+    };
+
     const handleMessage = async (event) => {
       if (event.origin !== window.location.origin) return;
 
       if (event.data?.type === "OAUTH_CALLBACK") {
-        window.removeEventListener("message", handleMessage);
-        clearInterval(pollTimer);
+        cleanup();
 
         if (event.data.error) {
+          // Stop loading spinner immediately
           setSocialLoading(null);
-          setGeneralError(event.data.error || "Google sign-in was cancelled.");
+          // When user closes popup, clicks Cancel, or denies consent:
+          // Return to login page without showing an error or redirecting
+          if (isCancellation(event.data.error, event.data.error_description)) {
+            return;
+          }
+          setGeneralError(
+            event.data.error_description || event.data.error || "Google sign-in failed."
+          );
           return;
         }
 
-        const result = await socialLogin({
-          provider: "google",
-          accessToken: event.data.accessToken || event.data.token,
-          idToken: event.data.idToken,
-        });
+        try {
+          const result = await socialLogin({
+            provider: "google",
+            accessToken: event.data.accessToken || event.data.token,
+            idToken: event.data.idToken,
+          });
 
-        setSocialLoading(null);
-        if (result.success) {
-          navigate(from, { replace: true });
-        } else {
-          setGeneralError(result.error || "Google authentication failed.");
+          setSocialLoading(null);
+          if (result.success) {
+            navigate(from, { replace: true });
+          } else {
+            setGeneralError(result.error || "Google authentication failed.");
+          }
+        } catch {
+          setSocialLoading(null);
+          setGeneralError("Authentication error occurred. Please try again.");
         }
       }
     };
 
     window.addEventListener("message", handleMessage);
 
-    const pollTimer = setInterval(() => {
-      if (popup.closed) {
-        clearInterval(pollTimer);
-        window.removeEventListener("message", handleMessage);
-        setSocialLoading(null);
+    pollTimer = setInterval(() => {
+      try {
+        if (!popup || popup.closed) {
+          cleanup();
+          // User closed popup: stop loading immediately without showing an error
+          setSocialLoading(null);
+        }
+      } catch {
+        // Cross-origin access restriction fallback
       }
-    }, 500);
+    }, 300);
   };
 
   const handleFacebookSignIn = () => {
