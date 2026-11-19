@@ -35,12 +35,18 @@
       const hash = window.location.hash.substring(1);
       const params = new URLSearchParams(hash || window.location.search);
       const accessToken = params.get("access_token");
+      const idToken = params.get("id_token");
       const code = params.get("code");
+      const error = params.get("error") || params.get("error_description");
 
       if (window.opener && !window.opener.closed) {
         window.opener.postMessage({
           type: "OAUTH_CALLBACK",
-          token: accessToken || code
+          accessToken: accessToken || null,
+          idToken: idToken || null,
+          token: accessToken || idToken || code || null,
+          code: code || null,
+          error: error || null
         }, window.location.origin);
       }
       setTimeout(function() {

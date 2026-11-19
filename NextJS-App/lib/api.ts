@@ -205,25 +205,26 @@ export const authApi = {
     return { success: false, error: res.error };
   },
 
-  async socialLogin(param: string | { provider?: string; email?: string; name?: string; avatarUrl?: string } = "google"): Promise<{
+  async socialLogin(payload: {
+    provider?: string;
+    idToken?: string;
+    accessToken?: string;
+    token?: string;
+  } = {}): Promise<{
     success: boolean;
     user?: UserProfile;
     error?: string;
-    isDemo?: boolean;
   }> {
-    const opts = typeof param === "string" ? { provider: param } : (param || {});
-    const provider = (opts.provider || "google").toLowerCase();
-    const providerLabel = provider === "facebook" ? "Facebook" : "Google";
-    const userEmail = (opts.email || `${provider}.voter@example.com`).trim().toLowerCase();
-    const userName = opts.name?.trim() || formatNameFromEmail(userEmail) || `${providerLabel} Voter`;
+    const provider = (payload.provider || "google").toLowerCase();
+    const endpoint = provider === "facebook" ? "/auth/facebook" : "/auth/google";
 
-    const res = await request<{ user: UserProfile; token: string }>("/auth/social", {
+    const res = await request<{ user: UserProfile; token: string }>(endpoint, {
       method: "POST",
       body: JSON.stringify({
         provider,
-        email: userEmail,
-        name: userName,
-        avatarUrl: opts.avatarUrl,
+        idToken: payload.idToken,
+        accessToken: payload.accessToken,
+        token: payload.token,
       }),
     });
 
@@ -233,25 +234,9 @@ export const authApi = {
       return { success: true, user: res.data.user };
     }
 
-    // Offline / Demo fallback
-    const userObj: UserProfile = {
-      id: `usr_${provider}_${Date.now()}`,
-      name: userName,
-      email: userEmail,
-      role: "user",
-      accountStatus: "Active",
-      joinedDate: new Date().toISOString(),
-      preferences: DEMO_USER.preferences,
-    };
-
-    saveRegisteredUser({ name: userName, email: userEmail });
-    setAuthToken(`demo-${provider}-token`);
-    setStoredUser(userObj);
-
     return {
-      success: true,
-      user: userObj,
-      isDemo: true,
+      success: false,
+      error: res.error || `${provider} authentication failed.`,
     };
   },
 

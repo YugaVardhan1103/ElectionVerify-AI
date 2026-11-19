@@ -39,17 +39,69 @@ export async function login(req, res, next) {
 }
 
 /**
- * Handle Social Sign-In (Google / Facebook)
+ * Handle Real Social / OAuth Sign-In (Google / Facebook)
  * POST /api/auth/social
  */
 export async function socialLogin(req, res, next) {
   try {
-    const { provider, email, name, avatarUrl } = req.body;
-    const result = await authService.socialLogin({ provider, email, name, avatarUrl });
+    const { provider, idToken, accessToken, token } = req.body;
+    const result = await authService.authenticateOAuthUser({
+      provider: provider || req.params?.provider || "google",
+      idToken,
+      accessToken,
+      token,
+    });
 
     res.status(200).json({
       success: true,
-      message: `${provider || "Social"} authentication successful.`,
+      message: `${provider || "OAuth"} authentication successful.`,
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * Handle Real Google OAuth Sign-In
+ * POST /api/auth/google
+ */
+export async function googleLogin(req, res, next) {
+  try {
+    const { idToken, accessToken, token } = req.body;
+    const result = await authService.authenticateOAuthUser({
+      provider: "google",
+      idToken,
+      accessToken,
+      token,
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "Google authentication successful.",
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * Handle Real Facebook OAuth Sign-In
+ * POST /api/auth/facebook
+ */
+export async function facebookLogin(req, res, next) {
+  try {
+    const { accessToken, token } = req.body;
+    const result = await authService.authenticateOAuthUser({
+      provider: "facebook",
+      accessToken,
+      token,
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "Facebook authentication successful.",
       data: result,
     });
   } catch (error) {

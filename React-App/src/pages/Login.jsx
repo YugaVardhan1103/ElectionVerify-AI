@@ -29,31 +29,93 @@ function Login() {
 
   const from = location.state?.from?.pathname || "/dashboard";
 
-  const handleSocialSignIn = (provider) => {
-    setGeneralError("");
-    setSocialLoading(provider);
+  // Initialize Facebook SDK if app ID is provided
+  useState(() => {
+    if (typeof window !== "undefined") {
+      const fbAppId = import.meta.env?.VITE_FACEBOOK_APP_ID;
+      if (fbAppId) {
+        window.fbAsyncInit = function () {
+          window.FB?.init({
+            appId: fbAppId,
+            cookie: true,
+            xfbml: true,
+            version: "v19.0",
+          });
+        };
+        if (window.FB) {
+          window.FB.init({
+            appId: fbAppId,
+            cookie: true,
+            xfbml: true,
+            version: "v19.0",
+          });
+        }
+      }
+    }
+  });
 
+  const handleGoogleSignIn = () => {
+    setGeneralError("");
+    const googleClientId = import.meta.env?.VITE_GOOGLE_CLIENT_ID;
+
+    if (!googleClientId) {
+      setGeneralError(
+        "Google OAuth is not configured. Please add VITE_GOOGLE_CLIENT_ID to your .env file."
+      );
+      return;
+    }
+
+    setSocialLoading("google");
+
+    // 1. Preferred: Google Identity Services (GIS) Token Client
+    if (window.google?.accounts?.oauth2) {
+      try {
+        const tokenClient = window.google.accounts.oauth2.initTokenClient({
+          client_id: googleClientId,
+          scope: "openid email profile",
+          prompt: "select_account",
+          callback: async (tokenResponse) => {
+            if (tokenResponse.error) {
+              setSocialLoading(null);
+              if (tokenResponse.error !== "popup_closed_by_user") {
+                setGeneralError(tokenResponse.error_description || "Google sign-in was cancelled.");
+              }
+              return;
+            }
+
+            const result = await socialLogin({
+              provider: "google",
+              accessToken: tokenResponse.access_token,
+            });
+
+            setSocialLoading(null);
+            if (result.success) {
+              navigate(from, { replace: true });
+            } else {
+              setGeneralError(result.error || "Google authentication failed.");
+            }
+          },
+        });
+        tokenClient.requestAccessToken({ prompt: "select_account" });
+        return;
+      } catch (err) {
+        console.warn("GIS token client error, falling back to popup redirect:", err);
+      }
+    }
+
+    // 2. Fallback: Direct Google OAuth 2.0 Popup
     const width = 500;
     const height = 630;
     const left = window.screenX + (window.outerWidth - width) / 2;
     const top = window.screenY + (window.outerHeight - height) / 2;
-
-    const googleClientId = import.meta.env?.VITE_GOOGLE_CLIENT_ID;
-    const facebookAppId = import.meta.env?.VITE_FACEBOOK_APP_ID;
-
-    let authUrl = `/oauth-popup.html?provider=${provider}`;
-
-    if (provider === "google" && googleClientId) {
-      const redirectUri = encodeURIComponent(`${window.location.origin}/oauth-callback.html`);
-      authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${googleClientId}&redirect_uri=${redirectUri}&response_type=token&scope=email%20profile&prompt=select_account`;
-    } else if (provider === "facebook" && facebookAppId) {
-      const redirectUri = encodeURIComponent(`${window.location.origin}/oauth-callback.html`);
-      authUrl = `https://www.facebook.com/v18.0/dialog/oauth?client_id=${facebookAppId}&redirect_uri=${redirectUri}&response_type=token&scope=email,public_profile`;
-    }
+    const redirectUri = encodeURIComponent(`${window.location.origin}/oauth-callback.html`);
+    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${encodeURIComponent(
+      googleClientId
+    )}&redirect_uri=${redirectUri}&response_type=token&scope=email%20profile%20openid&prompt=select_account`;
 
     const popup = window.open(
       authUrl,
-      `${provider}_oauth_window`,
+      "google_oauth_popup",
       `width=${width},height=${height},left=${left},top=${top},status=0,menubar=0,toolbar=0,location=1,resizable=1`
     );
 
@@ -66,22 +128,130 @@ function Login() {
     const handleMessage = async (event) => {
       if (event.origin !== window.location.origin) return;
 
-      if (event.data?.type === "OAUTH_SUCCESS" && event.data?.provider === provider) {
+      if (event.data?.type === "OAUTH_CALLBACK") {
         window.removeEventListener("message", handleMessage);
         clearInterval(pollTimer);
 
+        if (event.data.error) {
+          setSocialLoading(null);
+          setGeneralError(event.data.error || "Google sign-in was cancelled.");
+          return;
+        }
+
         const result = await socialLogin({
-          provider,
-          email: event.data.user?.email,
-          name: event.data.user?.name,
-          avatarUrl: event.data.user?.avatarUrl,
+          provider: "google",
+          accessToken: event.data.accessToken || event.data.token,
+          idToken: event.data.idToken,
         });
 
         setSocialLoading(null);
         if (result.success) {
           navigate(from, { replace: true });
         } else {
-          setGeneralError(result.error || `${provider} login failed.`);
+          setGeneralError(result.error || "Google authentication failed.");
+        }
+      }
+    };
+
+    window.addEventListener("message", handleMessage);
+
+    const pollTimer = setInterval(() => {
+      if (popup.closed) {
+        clearInterval(pollTimer);
+        window.removeEventListener("message", handleMessage);
+        setSocialLoading(null);
+      }
+    }, 500);
+  };
+
+  const handleFacebookSignIn = () => {
+    setGeneralError("");
+    const facebookAppId = import.meta.env?.VITE_FACEBOOK_APP_ID;
+
+    if (!facebookAppId) {
+      setGeneralError(
+        "Facebook OAuth is not configured. Please add VITE_FACEBOOK_APP_ID to your .env file."
+      );
+      return;
+    }
+
+    setSocialLoading("facebook");
+
+    // 1. Preferred: Facebook JavaScript SDK
+    if (window.FB) {
+      try {
+        window.FB.login(
+          async (response) => {
+            if (response.authResponse?.accessToken) {
+              const result = await socialLogin({
+                provider: "facebook",
+                accessToken: response.authResponse.accessToken,
+              });
+
+              setSocialLoading(null);
+              if (result.success) {
+                navigate(from, { replace: true });
+              } else {
+                setGeneralError(result.error || "Facebook authentication failed.");
+              }
+            } else {
+              setSocialLoading(null);
+              setGeneralError("Facebook sign-in was cancelled or denied.");
+            }
+          },
+          { scope: "public_profile,email" }
+        );
+        return;
+      } catch (err) {
+        console.warn("FB SDK login error, falling back to popup redirect:", err);
+      }
+    }
+
+    // 2. Fallback: Direct Facebook OAuth Dialog Popup
+    const width = 500;
+    const height = 630;
+    const left = window.screenX + (window.outerWidth - width) / 2;
+    const top = window.screenY + (window.outerHeight - height) / 2;
+    const redirectUri = encodeURIComponent(`${window.location.origin}/oauth-callback.html`);
+    const authUrl = `https://www.facebook.com/v19.0/dialog/oauth?client_id=${encodeURIComponent(
+      facebookAppId
+    )}&redirect_uri=${redirectUri}&response_type=token&scope=email,public_profile`;
+
+    const popup = window.open(
+      authUrl,
+      "facebook_oauth_popup",
+      `width=${width},height=${height},left=${left},top=${top},status=0,menubar=0,toolbar=0,location=1,resizable=1`
+    );
+
+    if (!popup) {
+      setSocialLoading(null);
+      setGeneralError("Popup was blocked by your browser. Please allow popups for this site.");
+      return;
+    }
+
+    const handleMessage = async (event) => {
+      if (event.origin !== window.location.origin) return;
+
+      if (event.data?.type === "OAUTH_CALLBACK") {
+        window.removeEventListener("message", handleMessage);
+        clearInterval(pollTimer);
+
+        if (event.data.error) {
+          setSocialLoading(null);
+          setGeneralError(event.data.error || "Facebook sign-in was cancelled.");
+          return;
+        }
+
+        const result = await socialLogin({
+          provider: "facebook",
+          accessToken: event.data.accessToken || event.data.token,
+        });
+
+        setSocialLoading(null);
+        if (result.success) {
+          navigate(from, { replace: true });
+        } else {
+          setGeneralError(result.error || "Facebook authentication failed.");
         }
       }
     };
@@ -299,7 +469,7 @@ function Login() {
           <div className="grid grid-cols-2 gap-3">
             <button
               type="button"
-              onClick={() => handleSocialSignIn("google")}
+              onClick={handleGoogleSignIn}
               disabled={isLoading || Boolean(socialLoading)}
               className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-border bg-surface px-4 py-2.5 text-sm font-semibold text-text-primary shadow-sm transition hover:bg-slate-100 active:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-slate-800 dark:active:bg-slate-700"
               aria-label="Sign in with Google"
@@ -351,7 +521,7 @@ function Login() {
 
             <button
               type="button"
-              onClick={() => handleSocialSignIn("facebook")}
+              onClick={handleFacebookSignIn}
               disabled={isLoading || Boolean(socialLoading)}
               className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-border bg-surface px-4 py-2.5 text-sm font-semibold text-text-primary shadow-sm transition hover:bg-slate-100 active:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-slate-800 dark:active:bg-slate-700"
               aria-label="Sign in with Facebook"

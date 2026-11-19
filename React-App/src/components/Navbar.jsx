@@ -83,6 +83,22 @@ function Navbar() {
                   Review Queue
                 </NavLink>
               )}
+              {user?.avatarUrl ? (
+                <Link
+                  to="/profile"
+                  className="flex items-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+                  title={user.name || "Profile"}
+                >
+                  <img
+                    src={user.avatarUrl}
+                    alt={user.name || "User"}
+                    className="h-8 w-8 rounded-full object-cover ring-2 ring-brand-500/30"
+                    onError={(e) => {
+                      e.currentTarget.style.display = "none";
+                    }}
+                  />
+                </Link>
+              ) : null}
               <button
                 type="button"
                 onClick={handleLogout}

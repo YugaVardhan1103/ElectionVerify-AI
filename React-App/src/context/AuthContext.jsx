@@ -54,13 +54,13 @@ export function AuthProvider({ children }) {
     return result;
   }, []);
 
-  const socialLogin = useCallback(async (provider = "google") => {
+  const socialLogin = useCallback(async (payload = {}) => {
     setIsLoading(true);
-    const result = await apiSocialLogin(provider);
+    const result = await apiSocialLogin(payload);
     setIsLoading(false);
     if (result.success && result.user) {
       setUser(result.user);
-      setIsDemo(Boolean(result.isDemo));
+      setIsDemo(false);
     }
     return result;
   }, []);

@@ -38,6 +38,8 @@ export interface UserProfile {
   email: string;
   role: "user" | "reviewer" | "admin";
   accountStatus: string;
+  avatarUrl?: string | null;
+  authProvider?: string;
   joinedDate?: string;
   preferences: UserPreferences;
 }

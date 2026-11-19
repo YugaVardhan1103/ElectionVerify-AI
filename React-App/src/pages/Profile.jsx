@@ -230,21 +230,27 @@ function Profile() {
         <div>
           <h1 className="text-3xl font-bold">My Profile &amp; Settings</h1>
           <p className="mt-2 text-text-secondary">
-            Manage your personal details, simulated credentials, notifications, and theme preferences.
+            Manage your personal details, credentials, notifications, and theme preferences.
           </p>
-        </div>
-
-        {/* Demo Mode Notice */}
-        <div className="rounded-lg border border-blue-200 bg-blue-50/70 p-3.5 text-xs text-blue-900 dark:border-blue-800/60 dark:bg-blue-950/40 dark:text-blue-300">
-          <span className="font-semibold">Demonstration Notice:</span> Profile changes are held in client memory for this active session. Passwords are never saved, stored, or transmitted anywhere.
         </div>
 
         {/* Profile Overview Card */}
         <Card>
           <div className="flex flex-col items-center gap-6 sm:flex-row">
-            {/* Dynamic Initials Avatar */}
-            <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full bg-brand-100 text-2xl font-bold text-brand-700 dark:bg-brand-950 dark:text-brand-300">
-              {getInitials(profile.name)}
+            {/* Dynamic Initials or Real OAuth Profile Photo */}
+            <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-full bg-brand-100 text-2xl font-bold text-brand-700 ring-2 ring-border shadow-sm dark:bg-brand-950 dark:text-brand-300">
+              {profile.avatarUrl ? (
+                <img
+                  src={profile.avatarUrl}
+                  alt={profile.name}
+                  className="h-full w-full object-cover rounded-full"
+                  onError={(e) => {
+                    e.currentTarget.style.display = "none";
+                  }}
+                />
+              ) : (
+                getInitials(profile.name)
+              )}
             </div>
 
             <div className="text-center sm:text-left">
@@ -261,6 +267,11 @@ function Profile() {
                 <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-300">
                   Account: {profile.accountStatus || "Active"}
                 </span>
+                {profile.authProvider && profile.authProvider !== "local" && (
+                  <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold capitalize text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                    {profile.authProvider} Verified
+                  </span>
+                )}
               </div>
             </div>
           </div>

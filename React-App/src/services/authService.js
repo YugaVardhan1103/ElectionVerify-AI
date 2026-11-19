@@ -158,28 +158,29 @@ export async function login({ email, password } = {}) {
 }
 
 /**
- * Sign in via OAuth / Social provider (Google, Facebook).
- * Supports explicit account confirmation (email & name) or default demo profile.
- * Contacts Shared-Backend /api/auth/social or activates client demo session.
+ * Real OAuth authentication with Google or Facebook.
+ * Verifies token securely with backend, which validates directly with Google / Meta APIs.
+ * Authenticated user is persisted in MongoDB and returned with real profile details.
+ * No fake accounts or mock profiles.
  *
- * @param {string|object} options - "google" | "facebook" or { provider, email, name, avatarUrl }
- * @returns {Promise<{ success: boolean, user?: object, token?: string, error?: string, isDemo?: boolean }>}
+ * @param {object} payload
+ * @param {string} [payload.provider="google"]
+ * @param {string} [payload.idToken]
+ * @param {string} [payload.accessToken]
+ * @param {string} [payload.token]
+ * @returns {Promise<{ success: boolean, user?: object, token?: string, error?: string }>}
  */
-export async function socialLogin(options = "google") {
-  const opts = typeof options === "string" ? { provider: options } : (options || {});
-  const provider = (opts.provider || "google").toLowerCase();
-  const providerLabel = provider === "facebook" ? "Facebook" : "Google";
-  const userEmail = (opts.email || `${provider}.voter@example.com`).trim().toLowerCase();
-  const userName = opts.name?.trim() || formatNameFromEmail(userEmail) || `${providerLabel} Voter`;
+export async function socialLogin({ provider = "google", idToken, accessToken, token } = {}) {
+  const normalizedProvider = provider.toLowerCase();
+  const endpoint = normalizedProvider === "facebook" ? "/auth/facebook" : "/auth/google";
 
-  // Try real social authentication with Shared-Backend
-  const res = await request("/auth/social", {
+  const res = await request(endpoint, {
     method: "POST",
     body: JSON.stringify({
-      provider,
-      email: userEmail,
-      name: userName,
-      avatarUrl: opts.avatarUrl,
+      provider: normalizedProvider,
+      idToken,
+      accessToken,
+      token,
     }),
   });
 
@@ -197,40 +198,9 @@ export async function socialLogin(options = "google") {
     };
   }
 
-  // Seamless offline/demo fallback
-  const userObj = {
-    id: `usr_${provider}_${Date.now()}`,
-    name: userName,
-    email: userEmail,
-    role: "user",
-    accountStatus: "Active",
-    joinedDate: new Date().toISOString(),
-    isDemoUser: true,
-    provider,
-    preferences: {
-      preferredLanguage: "English",
-      theme: "System",
-      notifications: {
-        emailNotifications: true,
-        resultNotifications: true,
-        announcementNotifications: false,
-      },
-    },
-  };
-
-  saveRegisteredUser(userObj);
-  setAuthToken(`demo-${provider}-token`);
-  setStoredUser(userObj);
-  inMemoryAuthState = {
-    isAuthenticated: true,
-    currentUser: userObj,
-  };
-
   return {
-    success: true,
-    user: userObj,
-    isDemo: true,
-    message: `Signed in with ${providerLabel} as ${userEmail}.`,
+    success: false,
+    error: res.error || `${provider} authentication failed. Please try again.`,
   };
 }
 

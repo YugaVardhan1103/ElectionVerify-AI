@@ -45,6 +45,20 @@ const UserSchema = new mongoose.Schema(
       enum: ["Active", "Suspended", "Pending"],
       default: "Active",
     },
+    avatarUrl: {
+      type: String,
+      default: null,
+    },
+    authProvider: {
+      type: String,
+      enum: ["local", "google", "facebook"],
+      default: "local",
+    },
+    providerId: {
+      type: String,
+      default: null,
+      index: true,
+    },
     preferences: {
       preferredLanguage: {
         type: String,

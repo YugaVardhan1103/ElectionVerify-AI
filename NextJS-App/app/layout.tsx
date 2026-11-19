@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import "./globals.css";
 import { ThemeProvider } from "@/context/ThemeContext";
 import { AuthProvider } from "@/context/AuthContext";
@@ -37,6 +38,8 @@ export default function RootLayout({
         />
       </head>
       <body className="flex min-h-screen flex-col bg-background text-text-primary antialiased">
+        <Script src="https://accounts.google.com/gsi/client" strategy="afterInteractive" />
+        <Script src="https://connect.facebook.net/en_US/sdk.js" strategy="afterInteractive" />
         <ThemeProvider>
           <AuthProvider>
             <Navbar />

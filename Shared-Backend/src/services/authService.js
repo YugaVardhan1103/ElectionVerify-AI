@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import { User } from "../models/User.js";
 
 /**
@@ -78,28 +79,174 @@ export class AuthService {
   }
 
   /**
-   * Authenticate or provision a user via social login (Google/Facebook).
+   * Securely verify a Google token (ID token or access token) directly with Google servers.
    *
-   * @param {object} socialData
-   * @param {string} socialData.provider
-   * @param {string} [socialData.email]
-   * @param {string} [socialData.name]
-   * @param {string} [socialData.avatarUrl]
+   * @param {object} param
+   * @param {string} [param.idToken]
+   * @param {string} [param.accessToken]
+   * @param {string} [param.token]
+   * @returns {Promise<{ email: string, name: string, picture: string|null, id: string }>}
+   */
+  async verifyGoogleToken({ idToken, accessToken, token }) {
+    const rawToken = idToken || token || accessToken;
+    if (!rawToken) {
+      const error = new Error("Google authentication requires an idToken or accessToken.");
+      error.statusCode = 400;
+      throw error;
+    }
+
+    let profile = null;
+
+    // 1. Try Google tokeninfo (standard for JWT ID tokens from Google Identity Services)
+    try {
+      const res = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(rawToken)}`);
+      if (res.ok) {
+        const info = await res.json();
+        if (info.email) {
+          profile = {
+            email: info.email.toLowerCase(),
+            name: info.name || info.email.split("@")[0],
+            picture: info.picture || null,
+            id: info.sub,
+            verified: info.email_verified === "true" || info.email_verified === true,
+          };
+        }
+      }
+    } catch {
+      // Fall through to userinfo endpoint
+    }
+
+    // 2. Try Google userinfo (standard for OAuth2 Bearer access tokens)
+    if (!profile) {
+      try {
+        const res = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
+          headers: { Authorization: `Bearer ${rawToken}` },
+        });
+        if (res.ok) {
+          const info = await res.json();
+          if (info.email) {
+            profile = {
+              email: info.email.toLowerCase(),
+              name: info.name || info.email.split("@")[0],
+              picture: info.picture || null,
+              id: info.sub,
+              verified: info.email_verified === true,
+            };
+          }
+        }
+      } catch {
+        // Handled below
+      }
+    }
+
+    if (!profile || !profile.email) {
+      const error = new Error("Failed to verify Google credentials with Google OAuth service. Token is invalid or expired.");
+      error.statusCode = 401;
+      throw error;
+    }
+
+    if (!profile.verified) {
+      const error = new Error("Google account email address is not verified.");
+      error.statusCode = 403;
+      throw error;
+    }
+
+    return profile;
+  }
+
+  /**
+   * Securely verify a Facebook access token directly with Facebook Graph API.
+   *
+   * @param {string} accessToken
+   * @returns {Promise<{ email: string, name: string, picture: string|null, id: string }>}
+   */
+  async verifyFacebookToken(accessToken) {
+    if (!accessToken) {
+      const error = new Error("Facebook authentication requires an accessToken.");
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const res = await fetch(
+      `https://graph.facebook.com/v19.0/me?fields=id,name,email,picture.type(large)&access_token=${encodeURIComponent(accessToken)}`
+    );
+
+    const data = await res.json();
+    if (!res.ok || data.error) {
+      const error = new Error(data.error?.message || "Failed to verify Facebook access token with Meta Graph API.");
+      error.statusCode = 401;
+      throw error;
+    }
+
+    const email = (data.email || `${data.id}@facebook.user`).toLowerCase();
+    const picture = data.picture?.data?.url || null;
+
+    return {
+      email,
+      name: data.name || "Facebook User",
+      picture,
+      id: data.id,
+    };
+  }
+
+  /**
+   * Authenticate real Google or Facebook user:
+   * 1. Verifies token with the OAuth provider's official API
+   * 2. Finds or creates the user in MongoDB with their actual details (name, email, profile picture)
+   * 3. Issues standard signed JWT session token
+   *
+   * @param {object} authPayload
+   * @param {string} authPayload.provider - "google" | "facebook"
+   * @param {string} [authPayload.idToken]
+   * @param {string} [authPayload.accessToken]
+   * @param {string} [authPayload.token]
    * @returns {Promise<{ user: object, token: string }>}
    */
-  async socialLogin({ provider = "google", email, name, avatarUrl } = {}) {
-    const provName = provider.charAt(0).toUpperCase() + provider.slice(1).toLowerCase();
-    const cleanEmail = (email || `${provider.toLowerCase()}.user@example.com`).trim().toLowerCase();
+  async authenticateOAuthUser({ provider = "google", idToken, accessToken, token } = {}) {
+    const normalizedProvider = provider.toLowerCase();
+    let verifiedProfile = null;
 
-    let user = await User.findOne({ email: cleanEmail });
+    if (normalizedProvider === "google") {
+      verifiedProfile = await this.verifyGoogleToken({ idToken, accessToken, token });
+    } else if (normalizedProvider === "facebook") {
+      verifiedProfile = await this.verifyFacebookToken(accessToken || token);
+    } else {
+      const error = new Error(`Unsupported OAuth provider: '${provider}'. Must be 'google' or 'facebook'.`);
+      error.statusCode = 400;
+      throw error;
+    }
+
+    // Check MongoDB for existing user by verified email
+    let user = await User.findOne({ email: verifiedProfile.email });
+
     if (!user) {
+      // Create new MongoDB user account with random secure password and real verified OAuth details
+      const randomPassword = crypto.randomBytes(32).toString("hex") + "!Aa1";
       user = await User.create({
-        name: name || `${provName} User`,
-        email: cleanEmail,
-        password: `OAuth_${Math.random().toString(36).slice(2)}!A1`,
+        name: verifiedProfile.name,
+        email: verifiedProfile.email,
+        password: randomPassword,
+        avatarUrl: verifiedProfile.picture,
+        authProvider: normalizedProvider,
+        providerId: verifiedProfile.id,
         role: "user",
         accountStatus: "Active",
       });
+    } else {
+      // Update existing account with latest avatar and link auth provider
+      let isModified = false;
+      if (verifiedProfile.picture && user.avatarUrl !== verifiedProfile.picture) {
+        user.avatarUrl = verifiedProfile.picture;
+        isModified = true;
+      }
+      if (!user.authProvider || user.authProvider === "local") {
+        user.authProvider = normalizedProvider;
+        user.providerId = verifiedProfile.id;
+        isModified = true;
+      }
+      if (isModified) {
+        await user.save();
+      }
     }
 
     if (user.accountStatus === "Suspended") {
@@ -108,12 +255,17 @@ export class AuthService {
       throw error;
     }
 
-    const token = user.generateAuthToken();
+    const jwtToken = user.generateAuthToken();
 
     return {
       user: user.toJSON(),
-      token,
+      token: jwtToken,
     };
+  }
+
+  // Alias for backward compatibility
+  async socialLogin(params) {
+    return this.authenticateOAuthUser(params);
   }
 
   /**
