@@ -15,9 +15,16 @@ export const API_BASE_URL = resolveApiBaseUrl(
 );
 
 /**
- * Builds the fully qualified request URL, safely preventing duplicate /api segments.
+ * Builds the fully qualified request URL, safely routing authentication
+ * through Next.js internal Prisma routes while sending shared data requests
+ * to the Shared-Backend.
  */
 export function buildApiUrl(endpoint: string): string {
+  // Authentication endpoints run on Next.js dedicated Prisma MongoDB database (electionverify_nextjs)
+  if (endpoint.startsWith("/auth/")) {
+    return `/api${endpoint}`;
+  }
+
   const base = API_BASE_URL.replace(/\/+$/, "");
   let path = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
   if (base.endsWith("/api") && path.startsWith("/api/")) {
