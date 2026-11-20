@@ -632,7 +632,7 @@ export const claimsApi = {
     }
     const formData = new FormData();
     for (const file of files) {
-      formData.append("evidence", file);
+      formData.append("images", file);
     }
     const res = await request<{ images: ImageProof[]; count: number }>("/claims/upload-evidence", {
       method: "POST",

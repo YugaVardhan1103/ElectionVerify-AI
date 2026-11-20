@@ -245,7 +245,7 @@ export async function uploadEvidenceImages(files) {
 
   const formData = new FormData();
   for (const file of files) {
-    formData.append("evidence", file);
+    formData.append("images", file);
   }
 
   const res = await request("/claims/upload-evidence", {

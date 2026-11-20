@@ -20,7 +20,10 @@ const router = Router();
 router.post(
   "/upload-evidence",
   requireAuth,
-  uploadMiddleware.array("images", 5),
+  uploadMiddleware.fields([
+    { name: "images", maxCount: 5 },
+    { name: "evidence", maxCount: 5 },
+  ]),
   uploadEvidenceImages
 );
 

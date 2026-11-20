@@ -169,7 +169,13 @@ export async function deleteClaim(req, res, next) {
  */
 export async function uploadEvidenceImages(req, res, next) {
   try {
-    const files = req.files;
+    const rawFiles = req.files;
+    const files = Array.isArray(rawFiles)
+      ? rawFiles
+      : rawFiles
+      ? [...(rawFiles.images || []), ...(rawFiles.evidence || [])]
+      : [];
+
     if (!files || files.length === 0) {
       return res.status(400).json({
         success: false,

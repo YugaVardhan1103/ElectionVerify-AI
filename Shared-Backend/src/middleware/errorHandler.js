@@ -51,6 +51,23 @@ export function errorHandler(err, req, res, next) {
     });
   }
 
+  // Multer File Upload Errors
+  if (err.name === "MulterError") {
+    let message = err.message || "File upload validation failed.";
+    if (err.code === "LIMIT_FILE_SIZE") {
+      message = "File size exceeds the 5 MB maximum limit.";
+    } else if (err.code === "LIMIT_FILE_COUNT") {
+      message = "Too many files uploaded. Maximum 5 image proof files allowed.";
+    } else if (err.code === "LIMIT_UNEXPECTED_FILE") {
+      message = `Unexpected upload field '${err.field}'. Allowed fields are 'images' or 'evidence'.`;
+    }
+    return res.status(400).json({
+      success: false,
+      error: message,
+      code: err.code,
+    });
+  }
+
   // Default Server Error
   const statusCode = err.statusCode || 500;
   const message =

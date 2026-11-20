@@ -1,6 +1,51 @@
 import jwt from "jsonwebtoken";
+import mongoose from "mongoose";
 import { env } from "../config/environment.js";
 import { User } from "../models/User.js";
+
+const NEXTJS_JWT_SECRET =
+  process.env.NEXTJS_JWT_SECRET ||
+  "electionverify_nextjs_jwt_secure_secret_key_2026";
+
+async function resolveUserFromToken(token) {
+  let decoded = null;
+  let isNextJsToken = false;
+
+  try {
+    decoded = jwt.verify(token, env.JWT_SECRET);
+  } catch (primaryErr) {
+    try {
+      decoded = jwt.verify(token, NEXTJS_JWT_SECRET);
+      isNextJsToken = true;
+    } catch {
+      throw primaryErr;
+    }
+  }
+
+  let user = null;
+  if (decoded.id && mongoose.isValidObjectId(decoded.id)) {
+    user = await User.findById(decoded.id);
+  }
+  if (!user && decoded.email) {
+    user = await User.findOne({ email: decoded.email.toLowerCase() });
+  }
+
+  if (!user && isNextJsToken && decoded.id) {
+    // Seamless support for authenticated users from Next.js dedicated database
+    user = {
+      _id: mongoose.isValidObjectId(decoded.id)
+        ? new mongoose.Types.ObjectId(decoded.id)
+        : new mongoose.Types.ObjectId(),
+      id: decoded.id,
+      email: decoded.email,
+      role: decoded.role || "user",
+      accountStatus: "Active",
+      source: "nextjs",
+    };
+  }
+
+  return user;
+}
 
 /**
  * Authentication Middleware
@@ -24,8 +69,7 @@ export async function requireAuth(req, res, next) {
       });
     }
 
-    const decoded = jwt.verify(token, env.JWT_SECRET);
-    const user = await User.findById(decoded.id);
+    const user = await resolveUserFromToken(token);
 
     if (!user) {
       return res.status(401).json({
@@ -67,8 +111,7 @@ export async function optionalAuth(req, res, next) {
     if (authHeader && authHeader.startsWith("Bearer ")) {
       const token = authHeader.split(" ")[1];
       if (token) {
-        const decoded = jwt.verify(token, env.JWT_SECRET);
-        const user = await User.findById(decoded.id);
+        const user = await resolveUserFromToken(token);
         if (user && user.accountStatus !== "Suspended") {
           req.user = user;
         }

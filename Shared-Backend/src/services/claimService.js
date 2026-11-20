@@ -41,6 +41,9 @@ export class ClaimService {
         ? categoryTags
         : ["General Election"];
 
+    const validUserId =
+      userId && mongoose.isValidObjectId(userId) ? userId : null;
+
     const sanitizedProofs = Array.isArray(imageProofs)
       ? imageProofs.slice(0, 5).map((img) => ({
           url: img.url || img.secureUrl,
@@ -51,7 +54,7 @@ export class ClaimService {
           height: img.height || 0,
           bytes: img.bytes || 0,
           originalName: img.originalName || "",
-          uploadedBy: userId || null,
+          uploadedBy: validUserId,
           createdAt: img.createdAt || new Date(),
         }))
       : [];
@@ -62,7 +65,7 @@ export class ClaimService {
       sourceUrl: sourceUrl ? sourceUrl.trim() : "",
       language,
       context: context ? context.trim() : "",
-      submittedBy: userId || null,
+      submittedBy: validUserId,
       isPublic: Boolean(isPublic),
       status: CLAIM_STATUS.UNDER_REVIEW,
       verdictId: null, // Claims enter lifecycle without verdict

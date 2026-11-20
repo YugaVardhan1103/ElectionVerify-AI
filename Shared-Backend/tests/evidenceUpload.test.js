@@ -126,6 +126,33 @@ describe("6. Image Proof Upload & Cloudinary Security", () => {
     assert.ok(json.error.includes("Invalid file format") || json.error.includes("signature"));
   });
 
+  it("3b. Multer field flexibility: accepts both 'images' and 'evidence' field names", async () => {
+    const boundary = "---------------------------974767299852498929531610575";
+    const bodyEvidence =
+      `--${boundary}\r\n` +
+      `Content-Disposition: form-data; name="evidence"; filename="test.png"\r\n` +
+      `Content-Type: image/png\r\n\r\n` +
+      validPngBuffer.toString("binary") +
+      `\r\n--${boundary}--\r\n`;
+
+    const res = await fetch(`http://127.0.0.1:${port}/api/claims/upload-evidence`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${userAlphaToken}`,
+        "Content-Type": `multipart/form-data; boundary=${boundary}`,
+      },
+      body: Buffer.from(bodyEvidence, "binary"),
+    });
+
+    // Should succeed or proceed past multer to Cloudinary (not fail with 500 Unexpected file field)
+    assert.notEqual(res.status, 500);
+    const json = await res.json();
+    assert.equal(res.status, 200);
+    assert.equal(json.success, true);
+    assert.ok(Array.isArray(json.data.images));
+    assert.equal(json.data.images.length, 1);
+  });
+
   it("4. Claim submission with image proofs: attaches proofs to claim in MongoDB", async () => {
     const mockImageProof = {
       url: "http://res.cloudinary.com/sefjntk4/image/upload/v1795166049/test.png",
