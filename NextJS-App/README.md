@@ -23,8 +23,8 @@ Enforces the platform's official verification outcomes defined in `constants/ver
 Claim processing lifecycle states (`UNDER_REVIEW`, `IN_VERIFICATION`, `COMPLETED`, `REJECTED`) are strictly separated from verdicts.
 
 ### 3. Shared-Backend REST API Integration
-- Connects directly to the `Shared-Backend` REST API via environment variable `NEXT_PUBLIC_API_URL` (`http://localhost:5000/api`).
-- **Resilient Offline Fallback**: If the backend service is offline or unreachable, the client operates in a transparent demonstration mode with in-memory session persistence.
+- Connects directly to the `Shared-Backend` REST API via environment variable `API_URL` (or legacy `NEXT_PUBLIC_API_URL`, defaults to `http://localhost:5000/api`).
+- **Resilient Fallback Handling**: If the backend service is offline or unreachable, the client handles errors gracefully with session persistence.
 - **Zero Hallucination Guarantee**: The client never fabricates artificial evidence, synthetic citations, or fake confidence percentages.
 
 ### 4. Comprehensive Page Workflows
@@ -119,7 +119,7 @@ Copy `.env.example` to `.env.local`:
 ```bash
 cp .env.example .env.local
 ```
-Set `NEXT_PUBLIC_API_URL` to your backend instance (defaults to `http://localhost:5000/api`).
+Set `API_URL` (or `NEXT_PUBLIC_API_URL`) to your backend instance (defaults to `http://localhost:5000/api`).
 
 ### 3. Development Server
 Start the local Next.js development server:

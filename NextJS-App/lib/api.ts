@@ -5,7 +5,9 @@ import {
 } from "./mockData";
 
 export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+  process.env.API_URL ||
+  process.env.NEXT_PUBLIC_API_URL ||
+  "http://localhost:5000/api";
 
 // In-memory session claims cache for when backend server is offline
 let sessionClaims: ClaimItem[] = [];
@@ -123,7 +125,7 @@ async function request<T>(
         API_BASE_URL.startsWith("http://127.0.0.1"));
 
     const errorMessage = isMixedContent
-      ? "Cannot connect to local backend (http://localhost:5000) from a secure HTTPS deployment. Please configure NEXT_PUBLIC_API_URL to point to your live backend API."
+      ? "Cannot connect to local backend (http://localhost:5000) from a secure HTTPS deployment. Please configure API_URL to point to your live backend API."
       : "Backend service is currently unreachable. Please ensure the backend server is running.";
 
     return {

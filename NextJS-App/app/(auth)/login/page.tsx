@@ -23,11 +23,12 @@ export default function LoginPage() {
 
   const handleGoogleSignIn = () => {
     setGeneralError("");
-    const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+    const googleClientId =
+      process.env.GOOGLE_CLIENT_ID || process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
 
     if (!googleClientId) {
       setGeneralError(
-        "Google OAuth is not configured. Please add NEXT_PUBLIC_GOOGLE_CLIENT_ID to your .env file."
+        "Google OAuth is not configured. Please add GOOGLE_CLIENT_ID to your .env file."
       );
       return;
     }
@@ -224,11 +225,12 @@ export default function LoginPage() {
 
   const handleFacebookSignIn = () => {
     setGeneralError("");
-    const facebookAppId = process.env.NEXT_PUBLIC_FACEBOOK_APP_ID;
+    const facebookAppId =
+      process.env.FACEBOOK_APP_ID || process.env.NEXT_PUBLIC_FACEBOOK_APP_ID;
 
     if (!facebookAppId) {
       setGeneralError(
-        "Facebook OAuth is not configured. Please add NEXT_PUBLIC_FACEBOOK_APP_ID to your .env file."
+        "Facebook OAuth is not configured. Please add FACEBOOK_APP_ID to your .env file."
       );
       return;
     }
