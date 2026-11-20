@@ -4,10 +4,27 @@ import {
   BASELINE_STATS,
 } from "./mockData";
 
-export const API_BASE_URL =
-  process.env.API_URL ||
-  process.env.NEXT_PUBLIC_API_URL ||
-  "http://localhost:5000/api";
+function resolveApiBaseUrl(url?: string): string {
+  const raw = (url || "").trim() || "http://localhost:5000/api";
+  const trimmed = raw.replace(/\/+$/, "");
+  return trimmed.endsWith("/api") ? trimmed : `${trimmed}/api`;
+}
+
+export const API_BASE_URL = resolveApiBaseUrl(
+  process.env.API_URL || process.env.NEXT_PUBLIC_API_URL
+);
+
+/**
+ * Builds the fully qualified request URL, safely preventing duplicate /api segments.
+ */
+export function buildApiUrl(endpoint: string): string {
+  const base = API_BASE_URL.replace(/\/+$/, "");
+  let path = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
+  if (base.endsWith("/api") && path.startsWith("/api/")) {
+    path = path.slice(4);
+  }
+  return `${base}${path}`;
+}
 
 // In-memory session claims cache for when backend server is offline
 let sessionClaims: ClaimItem[] = [];
@@ -95,8 +112,10 @@ async function request<T>(
     ...options.headers,
   };
 
+  const targetUrl = buildApiUrl(endpoint);
+
   try {
-    const res = await fetch(`${API_BASE_URL}${endpoint}`, {
+    const res = await fetch(targetUrl, {
       ...options,
       headers,
     });
@@ -117,7 +136,7 @@ async function request<T>(
     };
   } catch (err: unknown) {
     // Network error (backend server offline, CORS blocked, or unreachable)
-    console.warn(`[API Client] Backend unreachable at ${API_BASE_URL}${endpoint}:`, err);
+    console.warn(`[API Client] Backend unreachable at ${targetUrl}:`, err);
     const isMixedContent =
       typeof window !== "undefined" &&
       window.location.protocol === "https:" &&
