@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Button from "../components/Button";
-import { submitClaim } from "../services/claimService.js";
+import { submitClaim, uploadEvidenceImages } from "../services/claimService.js";
 import { SUPPORTED_LANGUAGES } from "../data/mockData.js";
 import { validateRequired, validateUrl } from "../utils/validators.js";
 import { getVerdictById } from "../constants/verdicts.js";
@@ -47,6 +47,100 @@ function SubmitClaim() {
   const [context, setContext] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("General Election");
 
+  // Image Proof / Evidence State
+  const [selectedImages, setSelectedImages] = useState([]);
+  const [imageError, setImageError] = useState("");
+  const [isDragOver, setIsDragOver] = useState(false);
+  const [uploadStatusText, setUploadStatusText] = useState("");
+  const fileInputRef = useRef(null);
+
+  // Clean up object URLs on unmount
+  useEffect(() => {
+    return () => {
+      selectedImages.forEach((img) => {
+        if (img.previewUrl) URL.revokeObjectURL(img.previewUrl);
+      });
+    };
+  }, [selectedImages]);
+
+  function formatFileSize(bytes) {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+  }
+
+  function handleFilesAdded(fileList) {
+    setImageError("");
+    if (!fileList || fileList.length === 0) return;
+
+    const incoming = Array.from(fileList);
+    const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
+    const ALLOWED_EXTS = [".jpg", ".jpeg", ".png", ".webp"];
+    const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
+    const MAX_TOTAL_IMAGES = 5;
+
+    if (selectedImages.length + incoming.length > MAX_TOTAL_IMAGES) {
+      setImageError(`Maximum ${MAX_TOTAL_IMAGES} images allowed per claim. You can only add ${MAX_TOTAL_IMAGES - selectedImages.length} more.`);
+      return;
+    }
+
+    const newEntries = [];
+    for (const file of incoming) {
+      const ext = file.name.slice(file.name.lastIndexOf(".")).toLowerCase();
+      const isValidType = ALLOWED_TYPES.includes(file.type) || ALLOWED_EXTS.includes(ext);
+
+      if (!isValidType) {
+        setImageError(`File "${file.name}" is not a supported format. Please upload JPG, PNG, or WEBP.`);
+        return;
+      }
+
+      if (file.size > MAX_FILE_SIZE) {
+        setImageError(`File "${file.name}" exceeds the 5 MB limit (${formatFileSize(file.size)}).`);
+        return;
+      }
+
+      const previewUrl = URL.createObjectURL(file);
+      newEntries.push({
+        id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        file,
+        name: file.name,
+        sizeFormatted: formatFileSize(file.size),
+        previewUrl,
+      });
+    }
+
+    setSelectedImages((prev) => [...prev, ...newEntries]);
+  }
+
+  function handleRemoveImage(id) {
+    setSelectedImages((prev) => {
+      const target = prev.find((img) => img.id === id);
+      if (target?.previewUrl) {
+        URL.revokeObjectURL(target.previewUrl);
+      }
+      return prev.filter((img) => img.id !== id);
+    });
+    setImageError("");
+  }
+
+  function handleDrop(e) {
+    e.preventDefault();
+    setIsDragOver(false);
+    if (e.dataTransfer?.files) {
+      handleFilesAdded(e.dataTransfer.files);
+    }
+  }
+
+  function handleDragOver(e) {
+    e.preventDefault();
+    setIsDragOver(true);
+  }
+
+  function handleDragLeave(e) {
+    e.preventDefault();
+    setIsDragOver(false);
+  }
+
   const [fieldErrors, setFieldErrors] = useState({});
   const [generalError, setGeneralError] = useState("");
   const [submissionSuccess, setSubmissionSuccess] = useState(null);
@@ -65,6 +159,7 @@ function SubmitClaim() {
     if (e && e.preventDefault) e.preventDefault();
     setGeneralError("");
     setSubmissionSuccess(null);
+    setImageError("");
     const errors = {};
 
     const claimVal = validateRequired(claim, "Claim statement");
@@ -93,6 +188,22 @@ function SubmitClaim() {
     const stepTimer2 = setTimeout(() => setActiveStep(3), 3200); // AI Analysis
 
     try {
+      let uploadedEvidence = [];
+      if (selectedImages.length > 0) {
+        setUploadStatusText(`Uploading ${selectedImages.length} evidence image${selectedImages.length > 1 ? "s" : ""} to Cloudinary...`);
+        const uploadRes = await uploadEvidenceImages(selectedImages.map((item) => item.file));
+        if (!uploadRes.success) {
+          clearTimeout(stepTimer1);
+          clearTimeout(stepTimer2);
+          setIsSubmitting(false);
+          setImageError(uploadRes.error || "Failed to upload evidence images. Please verify your connection.");
+          return;
+        }
+        uploadedEvidence = uploadRes.images || [];
+      }
+
+      setUploadStatusText("");
+
       const result = await submitClaim({
         claim,
         claimText: claim,
@@ -100,6 +211,7 @@ function SubmitClaim() {
         language,
         context,
         categoryTags: [selectedCategory],
+        imageProofs: uploadedEvidence,
       });
 
       clearTimeout(stepTimer1);
@@ -107,6 +219,12 @@ function SubmitClaim() {
       setActiveStep(4); // Finished
 
       if (result.success && result.claim) {
+        // Clean up object URLs
+        selectedImages.forEach((img) => {
+          if (img.previewUrl) URL.revokeObjectURL(img.previewUrl);
+        });
+        setSelectedImages([]);
+
         setSubmissionSuccess({
           message:
             result.message ||
@@ -125,6 +243,7 @@ function SubmitClaim() {
       setGeneralError(err.message || "An unexpected error occurred during submission.");
     } finally {
       setIsSubmitting(false);
+      setUploadStatusText("");
     }
   }
 
@@ -477,6 +596,140 @@ function SubmitClaim() {
 
               <p className="mt-1.5 text-xs text-text-secondary">
                 Contextual details help guide the multi-source evidence discovery engine.
+              </p>
+            </div>
+
+            {/* Image Proof / Evidence Upload Section */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm font-semibold text-text-primary">
+                  Image Proof / Evidence{" "}
+                  <span className="font-normal text-text-secondary">(Optional)</span>
+                </label>
+                <span className="text-xs text-text-secondary">
+                  {selectedImages.length} of 5 images selected
+                </span>
+              </div>
+
+              {/* Drag and Drop Zone */}
+              <div
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                onClick={() => fileInputRef.current?.click()}
+                className={`group relative flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed p-6 text-center transition-all ${
+                  isDragOver
+                    ? "border-brand-500 bg-brand-50/60 dark:bg-brand-950/40"
+                    : "border-border bg-surface hover:border-brand-400 hover:bg-slate-50/50 dark:hover:bg-slate-800/20"
+                }`}
+              >
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
+                  className="hidden"
+                  onChange={(e) => handleFilesAdded(e.target.files)}
+                  disabled={isSubmitting || selectedImages.length >= 5}
+                />
+
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-100 text-brand-600 dark:bg-brand-950/80 dark:text-brand-300">
+                  <svg
+                    className="h-6 w-6"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                    />
+                  </svg>
+                </div>
+
+                <p className="mt-3 text-sm font-medium text-text-primary">
+                  <span className="text-brand-600 hover:underline dark:text-brand-400">
+                    Click to browse
+                  </span>{" "}
+                  or drag and drop evidence photos here
+                </p>
+                <p className="mt-1 text-xs text-text-secondary">
+                  Supports JPG, JPEG, PNG, WEBP (Max 5 MB per image &bull; Max 5 images)
+                </p>
+              </div>
+
+              {/* Image Error Alert */}
+              {imageError && (
+                <div
+                  role="alert"
+                  className="mt-2 rounded-lg border border-red-200 bg-red-50 p-2.5 text-xs text-red-600 dark:border-rose-900/40 dark:bg-rose-950/30 dark:text-rose-300 flex items-center justify-between"
+                >
+                  <span>{imageError}</span>
+                  <button
+                    type="button"
+                    onClick={() => setImageError("")}
+                    className="font-bold ml-2 text-red-700 hover:text-red-900 dark:text-rose-200"
+                  >
+                    ✕
+                  </button>
+                </div>
+              )}
+
+              {/* Selected Images Preview Grid */}
+              {selectedImages.length > 0 && (
+                <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5">
+                  {selectedImages.map((img) => (
+                    <div
+                      key={img.id}
+                      className="group relative overflow-hidden rounded-lg border border-border bg-surface p-1.5 shadow-sm"
+                    >
+                      <div className="relative aspect-square w-full overflow-hidden rounded bg-slate-100 dark:bg-slate-800">
+                        <img
+                          src={img.previewUrl}
+                          alt={img.name}
+                          className="h-full w-full object-cover"
+                        />
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleRemoveImage(img.id);
+                          }}
+                          disabled={isSubmitting}
+                          title="Remove image"
+                          className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-rose-600 text-white shadow transition-transform hover:scale-110 focus:outline-none"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                      <div className="mt-1.5 px-0.5">
+                        <p
+                          className="truncate text-[11px] font-medium text-text-primary"
+                          title={img.name}
+                        >
+                          {img.name}
+                        </p>
+                        <p className="text-[10px] text-text-secondary">
+                          {img.sizeFormatted}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Upload Status during submission */}
+              {uploadStatusText && (
+                <div className="mt-2 flex items-center gap-2 text-xs font-semibold text-brand-600 dark:text-brand-400">
+                  <div className="h-3 w-3 animate-spin rounded-full border-2 border-brand-600 border-t-transparent" />
+                  <span>{uploadStatusText}</span>
+                </div>
+              )}
+
+              <p className="mt-2 text-xs text-text-secondary">
+                Notice: Uploaded images are stored as supplementary claim evidence and processed securely. Evidence is not treated as automatically verified truth.
               </p>
             </div>
 

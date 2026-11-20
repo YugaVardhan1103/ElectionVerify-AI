@@ -1,4 +1,4 @@
-import { ClaimItem, ClaimStats, UserProfile } from "@/types";
+import { ClaimItem, ClaimStats, ImageProof, UserProfile } from "@/types";
 import {
   BASELINE_SAMPLE_CLAIMS,
   BASELINE_STATS,
@@ -113,8 +113,9 @@ async function request<T>(
   options: RequestInit = {}
 ): Promise<{ success: boolean; data?: T; error?: string; isOffline?: boolean }> {
   const token = getAuthToken();
+  const isFormData = typeof FormData !== "undefined" && options.body instanceof FormData;
   const headers: HeadersInit = {
-    "Content-Type": "application/json",
+    ...(isFormData ? {} : { "Content-Type": "application/json" }),
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...options.headers,
   };
@@ -621,12 +622,38 @@ export const claimsApi = {
     return found || null;
   },
 
+  async uploadEvidenceImages(files: File[]): Promise<{
+    success: boolean;
+    images?: ImageProof[];
+    error?: string;
+  }> {
+    if (!files || files.length === 0) {
+      return { success: true, images: [] };
+    }
+    const formData = new FormData();
+    for (const file of files) {
+      formData.append("evidence", file);
+    }
+    const res = await request<{ images: ImageProof[]; count: number }>("/claims/upload-evidence", {
+      method: "POST",
+      body: formData,
+    });
+    if (res.success && res.data) {
+      return { success: true, images: res.data.images };
+    }
+    return {
+      success: false,
+      error: res.error || "Failed to upload evidence images to Cloudinary.",
+    };
+  },
+
   async submitClaim(data: {
     claimText: string;
     sourceUrl?: string;
     language?: string;
     context?: string;
     categoryTags?: string[];
+    imageProofs?: ImageProof[];
   }): Promise<{
     success: boolean;
     claim?: ClaimItem;
@@ -657,6 +684,7 @@ export const claimsApi = {
         sourceUrl: data.sourceUrl || "",
         language: data.language || "English",
         context: data.context || "",
+        imageProofs: data.imageProofs || [],
         submittedDate: new Date().toISOString(),
         submittedBy: userId,
         status: "COMPLETED",

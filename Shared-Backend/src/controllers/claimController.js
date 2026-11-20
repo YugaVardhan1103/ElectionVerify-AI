@@ -1,5 +1,10 @@
 import { claimService } from "../services/claimService.js";
 import { verificationService } from "../services/verificationService.js";
+import {
+  uploadBufferToCloudinary,
+  isValidImageSignature,
+  deleteFromCloudinary,
+} from "../services/cloudinaryService.js";
 
 /**
  * Submit an Election Claim
@@ -7,7 +12,7 @@ import { verificationService } from "../services/verificationService.js";
  */
 export async function submitClaim(req, res, next) {
   try {
-    const { claimText, sourceUrl, language, context, categoryTags } = req.body;
+    const { claimText, sourceUrl, language, context, categoryTags, imageProofs } = req.body;
     const userId = req.user ? req.user._id : null;
     const isPublic =
       req.body.isPublic === true &&
@@ -22,6 +27,7 @@ export async function submitClaim(req, res, next) {
       userId,
       categoryTags,
       isPublic,
+      imageProofs,
     });
 
     // Automatically run verification pipeline synchronously to comply with Vercel serverless lifecycle,
@@ -152,6 +158,113 @@ export async function deleteClaim(req, res, next) {
   try {
     const result = await claimService.deleteClaim(req.params.id, req.user);
     res.status(200).json(result);
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * Upload Image Evidence Proofs to Cloudinary
+ * POST /api/claims/upload-evidence
+ */
+export async function uploadEvidenceImages(req, res, next) {
+  try {
+    const files = req.files;
+    if (!files || files.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: "No image files provided for upload.",
+      });
+    }
+
+    if (files.length > 5) {
+      return res.status(400).json({
+        success: false,
+        error: "Maximum 5 image proof files allowed per submission.",
+      });
+    }
+
+    // Validate each file signature / magic bytes and size
+    for (const file of files) {
+      if (file.size > 5 * 1024 * 1024) {
+        return res.status(400).json({
+          success: false,
+          error: `File ${file.originalname} exceeds the 5 MB maximum size limit.`,
+        });
+      }
+
+      const validSignature = isValidImageSignature(file.buffer, file.mimetype);
+      if (!validSignature) {
+        return res.status(400).json({
+          success: false,
+          error: `File ${file.originalname} does not match an allowed image signature (JPG, PNG, WEBP).`,
+        });
+      }
+    }
+
+    const uploadedImages = [];
+    try {
+      for (const file of files) {
+        const uploadResult = await uploadBufferToCloudinary(file.buffer, {
+          original_filename: file.originalname,
+        });
+
+        uploadedImages.push({
+          url: uploadResult.url,
+          secureUrl: uploadResult.secure_url,
+          publicId: uploadResult.public_id,
+          format: uploadResult.format,
+          width: uploadResult.width,
+          height: uploadResult.height,
+          bytes: uploadResult.bytes,
+          originalName: file.originalname,
+          createdAt: new Date(),
+        });
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: "Evidence images uploaded successfully to Cloudinary.",
+        data: {
+          images: uploadedImages,
+        },
+      });
+    } catch (uploadError) {
+      // Roll back any images uploaded in this batch to prevent orphaned files
+      for (const img of uploadedImages) {
+        if (img.publicId) {
+          await deleteFromCloudinary(img.publicId).catch(() => {});
+        }
+      }
+      throw uploadError;
+    }
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * Delete an Image Evidence Proof from a Claim
+ * DELETE /api/claims/:id/evidence/:publicId(*)
+ */
+export async function deleteEvidenceImage(req, res, next) {
+  try {
+    const { id, publicId } = req.params;
+    const effectivePublicId = publicId || req.body.publicId || req.query.publicId;
+
+    if (!effectivePublicId) {
+      return res.status(400).json({
+        success: false,
+        error: "Cloudinary publicId parameter is required.",
+      });
+    }
+
+    const result = await claimService.deleteEvidenceImage(id, effectivePublicId, req.user);
+    res.status(200).json({
+      success: true,
+      message: "Evidence image removed successfully.",
+      data: result.claim,
+    });
   } catch (error) {
     next(error);
   }

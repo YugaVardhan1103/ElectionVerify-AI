@@ -110,16 +110,30 @@ Copy the `.env.example` template:
 ```bash
 cp .env.example .env
 ```
-Update `.env` with your MongoDB URI, JWT secret, and optional AI provider credentials:
+Update `.env` with your MongoDB URI, JWT secret, Cloudinary credentials, and optional AI provider credentials:
 ```env
 PORT=5000
 MONGODB_URI=mongodb://127.0.0.1:27017/electionverify
 JWT_SECRET=your_secure_random_jwt_secret_key_here
 AI_PROVIDER=auto
 GEMINI_API_KEY=your_gemini_api_key_here
+
+# Cloudinary Evidence Storage
+CLOUDINARY_CLOUD_NAME=your_cloudinary_cloud_name
+CLOUDINARY_API_KEY=your_cloudinary_api_key
+CLOUDINARY_API_SECRET=your_cloudinary_api_secret
 ```
 
-### 3. Running the Server
+### 3. Image Proof & Evidence Upload Architecture
+The backend provides secure evidence upload through Cloudinary:
+- **Endpoints**:
+  - `POST /api/claims/upload-evidence` (Authenticated): Accepts up to 5 images (max 5 MB each, JPG, PNG, WEBP). Validates MIME type and binary file signatures (magic bytes). Uploads to Cloudinary (`electionverify/evidence`), rolling back on batch failures.
+  - `DELETE /api/claims/:id/evidence/:publicId(*)` (Authenticated): Deletes an evidence asset from Cloudinary and MongoDB. Strictly enforces ownership: only the claim owner or authorized reviewers/admins can delete evidence.
+- **Model Storage**: Only Cloudinary metadata (`url`, `secureUrl`, `publicId`, `format`, `width`, `height`, `bytes`, `originalName`, `uploadedBy`, `createdAt`) is persisted in MongoDB, never binary images.
+- **Cascade Deletion**: When a claim is deleted, all associated Cloudinary evidence assets are automatically purged.
+- **Integrity**: User-submitted images are flagged as unverified attachments and never treated as automatically verified facts.
+
+### 4. Running the Server
 
 **Development Mode (auto-reload with Node `--watch`):**
 ```bash

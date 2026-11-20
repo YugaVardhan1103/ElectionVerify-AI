@@ -173,6 +173,12 @@ function ReviewerQueue() {
                           </span>
                         )}
 
+                        {claim.imageProofs && claim.imageProofs.length > 0 && (
+                          <span className="flex items-center gap-1 rounded-full bg-blue-50 px-2.5 py-0.5 text-[11px] font-semibold text-blue-700 dark:bg-blue-950/60 dark:text-blue-300">
+                            📷 {claim.imageProofs.length} proof{claim.imageProofs.length > 1 ? "s" : ""}
+                          </span>
+                        )}
+
                         <span className="text-xs text-text-secondary">
                           Submitted: {formatDate(claim.submittedDate)}
                         </span>
@@ -198,6 +204,27 @@ function ReviewerQueue() {
                             {claim.sourceUrl}
                           </a>
                         </p>
+                      )}
+
+                      {claim.imageProofs && claim.imageProofs.length > 0 && (
+                        <div className="mt-3 flex items-center gap-2">
+                          <span className="text-[11px] font-medium text-text-secondary">Evidence Proofs:</span>
+                          <div className="flex gap-1.5">
+                            {claim.imageProofs.slice(0, 4).map((img, idx) => (
+                              <img
+                                key={img.publicId || idx}
+                                src={img.secureUrl || img.url}
+                                alt={img.originalName || "Evidence"}
+                                className="h-9 w-9 rounded border border-border object-cover"
+                              />
+                            ))}
+                            {claim.imageProofs.length > 4 && (
+                              <span className="flex h-9 w-9 items-center justify-center rounded border border-border bg-slate-100 text-[10px] font-bold text-text-secondary dark:bg-slate-800">
+                                +{claim.imageProofs.length - 4}
+                              </span>
+                            )}
+                          </div>
+                        </div>
                       )}
                     </div>
 

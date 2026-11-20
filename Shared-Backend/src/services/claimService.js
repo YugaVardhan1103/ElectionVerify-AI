@@ -3,6 +3,7 @@ import { Claim } from "../models/Claim.js";
 import { VerificationReport } from "../models/VerificationReport.js";
 import { User } from "../models/User.js";
 import { CLAIM_STATUS, VERDICTS } from "../config/constants.js";
+import { deleteFromCloudinary } from "./cloudinaryService.js";
 
 /**
  * ElectionVerify AI - Claim Service
@@ -29,6 +30,7 @@ export class ClaimService {
     userId = null,
     categoryTags = [],
     isPublic = false,
+    imageProofs = [],
   }) {
     const trimmed = claimText.trim();
     const title =
@@ -38,6 +40,21 @@ export class ClaimService {
       categoryTags && categoryTags.length > 0
         ? categoryTags
         : ["General Election"];
+
+    const sanitizedProofs = Array.isArray(imageProofs)
+      ? imageProofs.slice(0, 5).map((img) => ({
+          url: img.url || img.secureUrl,
+          secureUrl: img.secureUrl || img.url,
+          publicId: img.publicId,
+          format: img.format || "",
+          width: img.width || 0,
+          height: img.height || 0,
+          bytes: img.bytes || 0,
+          originalName: img.originalName || "",
+          uploadedBy: userId || null,
+          createdAt: img.createdAt || new Date(),
+        }))
+      : [];
 
     const claim = await Claim.create({
       title,
@@ -50,6 +67,7 @@ export class ClaimService {
       status: CLAIM_STATUS.UNDER_REVIEW,
       verdictId: null, // Claims enter lifecycle without verdict
       categoryTags: defaultTags,
+      imageProofs: sanitizedProofs,
     });
 
     return claim;
@@ -309,6 +327,15 @@ export class ClaimService {
       throw err;
     }
 
+    // Safely cleanup all attached Cloudinary image proof assets
+    if (claim.imageProofs && claim.imageProofs.length > 0) {
+      for (const proof of claim.imageProofs) {
+        if (proof.publicId) {
+          await deleteFromCloudinary(proof.publicId).catch(() => {});
+        }
+      }
+    }
+
     // Delete associated verification report if present
     if (claim.verificationReport) {
       await VerificationReport.findByIdAndDelete(claim.verificationReport);
@@ -436,6 +463,59 @@ export class ClaimService {
       rejected,
       byVerdict,
     };
+  }
+
+  /**
+   * Delete an image proof attachment from a claim.
+   * Enforces that only the claim owner or an admin/reviewer can remove evidence.
+   *
+   * @param {string} claimId
+   * @param {string} publicId
+   * @param {object} currentUser
+   * @returns {Promise<object>}
+   */
+  async deleteEvidenceImage(claimId, publicId, currentUser) {
+    if (!mongoose.Types.ObjectId.isValid(claimId)) {
+      const err = new Error("Invalid claim ID format.");
+      err.statusCode = 400;
+      throw err;
+    }
+
+    const claim = await Claim.findById(claimId);
+    if (!claim) {
+      const err = new Error("Claim not found.");
+      err.statusCode = 404;
+      throw err;
+    }
+
+    const isPrivileged =
+      currentUser && (currentUser.role === "admin" || currentUser.role === "reviewer");
+    const isOwner =
+      currentUser &&
+      claim.submittedBy &&
+      claim.submittedBy.toString() === currentUser._id.toString();
+
+    if (!isPrivileged && !isOwner) {
+      const err = new Error("You are not authorized to delete evidence from this claim.");
+      err.statusCode = 403;
+      throw err;
+    }
+
+    const targetProof = (claim.imageProofs || []).find((p) => p.publicId === publicId);
+    if (!targetProof) {
+      const err = new Error("Evidence image not found on this claim.");
+      err.statusCode = 404;
+      throw err;
+    }
+
+    // Delete from Cloudinary
+    await deleteFromCloudinary(publicId);
+
+    // Remove from MongoDB claim document
+    claim.imageProofs = claim.imageProofs.filter((p) => p.publicId !== publicId);
+    await claim.save();
+
+    return { success: true, message: "Evidence image deleted successfully.", claim };
   }
 }
 

@@ -54,6 +54,19 @@ export interface EvidenceItem {
   relevance?: string;
 }
 
+export interface ImageProof {
+  url: string;
+  secureUrl: string;
+  publicId: string;
+  format?: string;
+  width?: number;
+  height?: number;
+  bytes?: number;
+  originalName?: string;
+  uploadedBy?: string;
+  createdAt?: string;
+}
+
 export interface EvidenceSource {
   url: string;
   title?: string;
@@ -99,6 +112,7 @@ export interface ClaimItem {
   sourceUrl?: string;
   language: string;
   context?: string;
+  imageProofs?: ImageProof[];
   submittedBy?: string | null;
   submittedDate: string;
   status: ClaimProcessingStatus;

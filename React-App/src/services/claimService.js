@@ -145,6 +145,7 @@ function generateOfflineVerificationReport(claimText, sourceUrl) {
  * @param {string} [submissionData.language="English"]
  * @param {string} [submissionData.context=""]
  * @param {Array<string>} [submissionData.categoryTags]
+ * @param {Array<object>} [submissionData.imageProofs]
  * @returns {Promise<{ success: boolean, claim?: object, message?: string, error?: string, isDemo?: boolean }>}
  */
 export async function submitClaim({
@@ -154,6 +155,7 @@ export async function submitClaim({
   language = "English",
   context = "",
   categoryTags = [],
+  imageProofs = [],
 } = {}) {
   const text = (claimText || claim || "").trim();
 
@@ -176,6 +178,7 @@ export async function submitClaim({
       language: language.trim(),
       context: context.trim(),
       categoryTags: categoryTags.length > 0 ? categoryTags : ["General Election"],
+      imageProofs: Array.isArray(imageProofs) ? imageProofs : [],
     }),
   });
 
@@ -202,6 +205,7 @@ export async function submitClaim({
       sourceUrl: sourceUrl ? sourceUrl.trim() : "",
       language: language.trim(),
       context: context ? context.trim() : "",
+      imageProofs: Array.isArray(imageProofs) ? imageProofs : [],
       submittedDate: new Date().toISOString(),
       submittedBy: userId,
       status: CLAIM_STATUS.COMPLETED,
@@ -226,6 +230,53 @@ export async function submitClaim({
     success: false,
     error: res.error || "Failed to submit claim.",
   };
+}
+
+/**
+ * Upload image proofs / evidence to Cloudinary via backend endpoint.
+ *
+ * @param {Array<File>} files
+ * @returns {Promise<{ success: boolean, images?: Array<object>, error?: string }>}
+ */
+export async function uploadEvidenceImages(files) {
+  if (!files || files.length === 0) {
+    return { success: true, images: [] };
+  }
+
+  const formData = new FormData();
+  for (const file of files) {
+    formData.append("evidence", file);
+  }
+
+  const res = await request("/claims/upload-evidence", {
+    method: "POST",
+    body: formData,
+  });
+
+  if (res.success && res.data?.images) {
+    return {
+      success: true,
+      images: res.data.images,
+    };
+  }
+
+  return {
+    success: false,
+    error: res.error || "Failed to upload evidence images to Cloudinary.",
+  };
+}
+
+/**
+ * Delete a specific evidence image from a claim.
+ *
+ * @param {string} claimId
+ * @param {string} publicId
+ * @returns {Promise<{ success: boolean, message?: string, error?: string }>}
+ */
+export async function deleteEvidenceImage(claimId, publicId) {
+  return request(`/claims/${claimId}/evidence/${publicId}`, {
+    method: "DELETE",
+  });
 }
 
 /**

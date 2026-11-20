@@ -89,6 +89,24 @@ const ClaimSchema = new mongoose.Schema(
       type: [String],
       default: ["General Election"],
     },
+    imageProofs: [
+      {
+        url: { type: String, required: true },
+        secureUrl: { type: String, required: true },
+        publicId: { type: String, required: true },
+        format: { type: String, default: "" },
+        width: { type: Number, default: 0 },
+        height: { type: Number, default: 0 },
+        bytes: { type: Number, default: 0 },
+        originalName: { type: String, default: "" },
+        uploadedBy: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "User",
+          default: null,
+        },
+        createdAt: { type: Date, default: Date.now },
+      },
+    ],
     verificationReport: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "VerificationReport",

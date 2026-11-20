@@ -31,22 +31,25 @@ Election-related misinformation, rumor cascades, and manipulated media can disto
 - High-performance, client-rendered single-page application built on Vite and React 19.
 - Dynamic Bearer JWT authentication with automatic 401 token revocation and session restoration.
 - Real-time Verification Dashboard with aggregate claim statistics and latest activity.
-- Multilingual claim submission interface with client-side validation.
+- Multilingual claim submission interface with client-side validation and **Image Proof / Evidence Upload** (drag & drop, up to 5 images, max 5 MB each, JPG/PNG/WEBP, previews & removal).
 - Interactive Verification History with keyword search, canonical verdict filtering, and lifecycle status filtering.
-- Deep-dive Verification Result views displaying verdict badges, claim metadata, supporting/contradicting evidence, and human review audit notes.
+- Deep-dive Verification Result views displaying verdict badges, claim metadata, user-submitted image proofs, supporting/contradicting evidence, and human review audit notes.
+- Dedicated Reviewer Triage Queue displaying image proof count badges and preview thumbnails.
 - Profile and preference manager with language selection and accessible Light/Dark theme toggle.
 - Resilient offline fallback: seamlessly transitions to demonstration mode if the backend server is unreachable.
 
 ### 2. Next.js Application (`NextJS-App/`)
 - Enterprise-grade hybrid frontend built on Next.js 15 (App Router), TypeScript, and Tailwind CSS.
 - Server-side and client-side rendering with streaming layouts, custom loading skeletons, and accessible route boundaries.
-- Equivalent core workflows matching the React SPA: Auth, Dashboard, Claim Submission, Verification History, and Profile Settings.
-- Full TypeScript type safety across canonical verdicts, claim statuses, user profiles, and evidence structures.
+- Equivalent core workflows matching the React SPA: Auth, Dashboard, Claim Submission with **Image Proof / Evidence Upload**, Verification History, and Profile Settings.
+- Full TypeScript type safety across canonical verdicts, claim statuses, user profiles, image proofs, and evidence structures.
 - Independent environment configuration (`NEXT_PUBLIC_API_URL`).
 
 ### 3. Shared Express.js Backend (`Shared-Backend/`)
 - Modular Node.js / Express.js REST API with comprehensive input validation and centralized error handling.
 - MongoDB persistence with Mongoose ODM, unique indexes, and compound text search indexes.
+- **Secure Cloudinary Evidence Storage**: Authenticated `POST /api/claims/upload-evidence` with magic byte file signature verification, 5MB limit, and batch rollback; `DELETE /api/claims/:id/evidence/:publicId(*)` with strict ownership / reviewer authorization; automatic cascade deletion when claims are deleted.
+- Stateless JWT authentication signed with HMAC-SHA256 and bcrypt password hashing (12 salt rounds).
 - Stateless JWT authentication signed with HMAC-SHA256 and bcrypt password hashing (12 salt rounds).
 - Role-Based Access Control (RBAC) supporting `user`, `reviewer`, and `admin` permissions.
 - Pluggable Multi-Provider AI Architecture:
