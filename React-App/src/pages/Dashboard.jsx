@@ -6,7 +6,6 @@ import OfflineNotice from "../components/OfflineNotice";
 import StatusBadge from "../components/StatusBadge";
 import { getClaimStats, getClaims } from "../services/claimService.js";
 import { getVerdictById } from "../constants/verdicts.js";
-
 /**
  * ElectionVerify AI - Dashboard Page
  *
@@ -19,7 +18,6 @@ function Dashboard() {
   const [recentClaims, setRecentClaims] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isOffline, setIsOffline] = useState(false);
-
   useEffect(() => {
     let isMounted = true;
     async function loadDashboard() {
