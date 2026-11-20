@@ -58,7 +58,7 @@ Election-related misinformation, rumor cascades, and manipulated media can disto
 - Dual-Verdict & Reviewer Audit Trail preserving original AI output while recording human review decisions (`APPROVED`, `REVISED`, `REQUIRES_FURTHER_INVESTIGATION`).
 - Built-in rate limiting (`express-rate-limit`) and Helmet security headers.
 
----
+----
 
 ## 🏛️ System Architecture
 
