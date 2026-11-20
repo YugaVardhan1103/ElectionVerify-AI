@@ -40,8 +40,9 @@ export function Navbar() {
         <Link
           href="/"
           onClick={closeMobileMenu}
-          className="rounded text-2xl font-bold tracking-tight text-text-primary transition-colors hover:text-brand-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 dark:hover:text-brand-400"
+          className="flex items-center gap-2 rounded text-2xl font-bold tracking-tight text-text-primary transition-colors hover:text-brand-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 dark:hover:text-brand-400"
         >
+          <img src="/electionverify-logo.png" alt="ElectionVerify AI Logo" className="h-9 w-9" />
           ElectionVerify AI
         </Link>
 
