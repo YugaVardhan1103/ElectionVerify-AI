@@ -2,7 +2,8 @@
 
 ### AI-Assisted Election Information Verification & Civic Integrity Platform
 
-🌐 **Live Demo:** [https://electionverify-react.vercel.app/](https://electionverify-react.vercel.app/)
+🌐 **Live Demo (React SPA):** [https://electionverify-react.vercel.app/](https://electionverify-react.vercel.app/)  
+🌐 **Live Demo (Next.js App):** [https://electionverify-nextjs.vercel.app/](https://electionverify-nextjs.vercel.app/)
 
 ElectionVerify AI is an AI-assisted platform designed to help voters, researchers, journalists, and civic advocates investigate election-related claims, examine supporting and contradicting evidence, and understand verification findings through transparent, explainable reports.
 
