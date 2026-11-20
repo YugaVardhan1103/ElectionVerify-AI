@@ -4,10 +4,20 @@ import {
   BASELINE_STATS,
 } from "./mockData";
 
-export const API_BASE_URL =
-  process.env.API_URL ||
-  process.env.NEXT_PUBLIC_API_URL ||
-  "http://localhost:5000/api";
+export const API_BASE_URL = (() => {
+  // 1. Explicitly configured API URL (from env)
+  if (process.env.API_URL) return process.env.API_URL.replace(/\/$/, "");
+  if (process.env.NEXT_PUBLIC_API_URL)
+    return process.env.NEXT_PUBLIC_API_URL.replace(/\/$/, "");
+
+  // 2. In browser on HTTPS (e.g. deployed on Vercel), default seamlessly to internal /api
+  if (typeof window !== "undefined" && window.location.protocol === "https:") {
+    return "/api";
+  }
+
+  // 3. Local development default
+  return "http://localhost:5000/api";
+})();
 
 // In-memory session claims cache for when backend server is offline
 let sessionClaims: ClaimItem[] = [];
