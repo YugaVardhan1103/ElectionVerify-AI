@@ -282,6 +282,7 @@ export class VerificationService {
           supportingEvidence: aiOutcome.supportingEvidence,
           contradictingEvidence: aiOutcome.contradictingEvidence,
           sources,
+          imageProofs: claim.imageProofs || [],
           aiMetadata: aiOutcome.aiMetadata,
         };
 

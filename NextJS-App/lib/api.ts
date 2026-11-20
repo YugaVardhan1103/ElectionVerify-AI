@@ -607,8 +607,16 @@ export const claimsApi = {
 
   async getClaimById(id: string): Promise<ClaimItem | null> {
     const res = await request<{ claim: ClaimItem }>(`/claims/${id}`);
-    if (res.success && res.data) {
-      return res.data.claim;
+    if (res.success && res.data?.claim) {
+      const claim = res.data.claim;
+      if (
+        claim.verificationReport &&
+        (!claim.verificationReport.imageProofs ||
+          claim.verificationReport.imageProofs.length === 0)
+      ) {
+        claim.verificationReport.imageProofs = claim.imageProofs || [];
+      }
+      return claim;
     }
 
     const user = getStoredUser();

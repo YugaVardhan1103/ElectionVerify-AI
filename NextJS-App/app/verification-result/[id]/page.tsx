@@ -9,7 +9,7 @@ import StatusBadge from "@/components/StatusBadge";
 import Button from "@/components/Button";
 import { claimsApi } from "@/lib/api";
 import { getVerdictById } from "@/constants/verdicts";
-import { ClaimItem } from "@/types";
+import { ClaimItem, ImageProof } from "@/types";
 
 export default function ClaimResultPage() {
   const params = useParams();
@@ -149,6 +149,14 @@ export default function ClaimResultPage() {
   const verdict = claim.verdictId ? getVerdictById(claim.verdictId) : null;
   const isUnderReview = claim.status === "UNDER_REVIEW";
 
+  const proofs = (
+    Array.isArray(claim?.imageProofs) && claim.imageProofs.length > 0
+      ? claim.imageProofs
+      : Array.isArray(report?.imageProofs) && (report.imageProofs as any[]).length > 0
+      ? report.imageProofs
+      : []
+  ) as ImageProof[];
+
   return (
     <main className="min-h-screen bg-background px-6 py-10">
       <div className="mx-auto max-w-5xl space-y-6">
@@ -223,11 +231,11 @@ export default function ClaimResultPage() {
                 </div>
               )}
 
-              {claim.imageProofs && claim.imageProofs.length > 0 && (
+              {proofs && proofs.length > 0 && (
                 <div className="mt-4 border-t border-border pt-3">
                   <div className="flex items-center justify-between">
                     <p className="text-xs font-bold text-text-primary uppercase tracking-wide">
-                      User-Submitted Image Proofs ({claim.imageProofs.length})
+                      User-Submitted Image Proofs ({proofs.length})
                     </p>
                     <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">
                       Unverified User Attachment
@@ -237,25 +245,30 @@ export default function ClaimResultPage() {
                     Supplementary images submitted with this claim. Unverified by election authorities.
                   </p>
                   <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-                    {claim.imageProofs.map((img, idx) => (
-                      <a
-                        key={img.publicId || idx}
-                        href={img.secureUrl || img.url}
-                        target="_blank"
-                        rel="noreferrer noopener"
-                        className="group relative block aspect-video overflow-hidden rounded-lg border border-border bg-slate-100 hover:border-brand-500 dark:bg-slate-800"
-                      >
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={img.secureUrl || img.url}
-                          alt={img.originalName || `Evidence ${idx + 1}`}
-                          className="h-full w-full object-cover transition-transform group-hover:scale-105"
-                        />
-                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                          <span className="text-[10px] font-semibold text-white">View &nearr;</span>
-                        </div>
-                      </a>
-                    ))}
+                    {proofs.map((img, idx) => {
+                      const imgUrl = img.secureUrl || (img as any).secure_url || img.url || "";
+                      const publicId = img.publicId || (img as any).public_id || `proof-${idx}`;
+                      const displayName = img.originalName || (img as any).original_name || `Evidence ${idx + 1}`;
+                      return (
+                        <a
+                          key={publicId}
+                          href={imgUrl}
+                          target="_blank"
+                          rel="noreferrer noopener"
+                          className="group relative block aspect-video overflow-hidden rounded-lg border border-border bg-slate-100 hover:border-brand-500 dark:bg-slate-800"
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={imgUrl}
+                            alt={displayName}
+                            className="h-full w-full object-cover transition-transform group-hover:scale-105"
+                          />
+                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                            <span className="text-[10px] font-semibold text-white">View &nearr;</span>
+                          </div>
+                        </a>
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -338,7 +351,7 @@ export default function ClaimResultPage() {
             </Card>
 
             {/* User-Submitted Evidence / Image Proofs */}
-            {claim.imageProofs && claim.imageProofs.length > 0 && (
+            {proofs && proofs.length > 0 && (
               <Card>
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                   <div className="flex items-center gap-2">
@@ -346,7 +359,7 @@ export default function ClaimResultPage() {
                       📷
                     </span>
                     <h2 className="text-base font-bold text-text-primary">
-                      User-Submitted Evidence &amp; Image Proofs ({claim.imageProofs.length})
+                      User-Submitted Evidence &amp; Image Proofs ({proofs.length})
                     </h2>
                   </div>
                   <span className="w-fit rounded-full bg-amber-100 px-2.5 py-0.5 text-[10px] font-semibold text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">
@@ -359,44 +372,49 @@ export default function ClaimResultPage() {
                 </p>
 
                 <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                  {claim.imageProofs.map((img, idx) => (
-                    <div
-                      key={img.publicId || idx}
-                      className="group overflow-hidden rounded-lg border border-border bg-surface p-2 shadow-sm transition-all hover:border-brand-500"
-                    >
-                      <a
-                        href={img.secureUrl || img.url}
-                        target="_blank"
-                        rel="noreferrer noopener"
-                        className="relative block aspect-video w-full overflow-hidden rounded bg-slate-100 dark:bg-slate-800"
+                  {proofs.map((img, idx) => {
+                    const imgUrl = img.secureUrl || (img as any).secure_url || img.url || "";
+                    const publicId = img.publicId || (img as any).public_id || `proof-card-${idx}`;
+                    const displayName = img.originalName || (img as any).original_name || `Evidence proof ${idx + 1}`;
+                    return (
+                      <div
+                        key={publicId}
+                        className="group overflow-hidden rounded-lg border border-border bg-surface p-2 shadow-sm transition-all hover:border-brand-500"
                       >
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={img.secureUrl || img.url}
-                          alt={img.originalName || `Evidence proof ${idx + 1}`}
-                          className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
-                        />
-                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                          <span className="rounded bg-black/75 px-2.5 py-1 text-[11px] font-medium text-white shadow">
-                            View Full Size &nearr;
-                          </span>
-                        </div>
-                      </a>
-                      <div className="mt-2 flex items-center justify-between text-xs">
-                        <span
-                          className="truncate font-medium text-text-primary max-w-[170px]"
-                          title={img.originalName}
+                        <a
+                          href={imgUrl}
+                          target="_blank"
+                          rel="noreferrer noopener"
+                          className="relative block aspect-video w-full overflow-hidden rounded bg-slate-100 dark:bg-slate-800"
                         >
-                          {img.originalName || `Evidence ${idx + 1}`}
-                        </span>
-                        {img.bytes && (
-                          <span className="text-[10px] text-text-secondary">
-                            {(img.bytes / 1024).toFixed(0)} KB
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={imgUrl}
+                            alt={displayName}
+                            className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
+                          />
+                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                            <span className="rounded bg-black/75 px-2.5 py-1 text-[11px] font-medium text-white shadow">
+                              View Full Size &nearr;
+                            </span>
+                          </div>
+                        </a>
+                        <div className="mt-2 flex items-center justify-between text-xs">
+                          <span
+                            className="truncate font-medium text-text-primary max-w-[170px]"
+                            title={displayName}
+                          >
+                            {displayName}
                           </span>
-                        )}
+                          {img.bytes && (
+                            <span className="text-[10px] text-text-secondary">
+                              {(img.bytes / 1024).toFixed(0)} KB
+                            </span>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </Card>
             )}

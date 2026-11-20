@@ -117,6 +117,24 @@ const VerificationReportSchema = new mongoose.Schema(
       type: [EvidenceSourceSchema],
       default: [],
     },
+    imageProofs: [
+      {
+        url: { type: String, default: "" },
+        secureUrl: { type: String, default: "" },
+        publicId: { type: String, default: "" },
+        format: { type: String, default: "" },
+        width: { type: Number, default: 0 },
+        height: { type: Number, default: 0 },
+        bytes: { type: Number, default: 0 },
+        originalName: { type: String, default: "" },
+        uploadedBy: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "User",
+          default: null,
+        },
+        createdAt: { type: Date, default: Date.now },
+      },
+    ],
     aiMetadata: {
       provider: {
         type: String,

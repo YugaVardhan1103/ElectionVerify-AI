@@ -102,6 +102,7 @@ export interface VerificationReportData {
     notes?: string;
     reviewedAt?: string | null;
   };
+  imageProofs?: ImageProof[];
 }
 
 export interface ClaimItem {

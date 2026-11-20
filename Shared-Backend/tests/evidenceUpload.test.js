@@ -197,6 +197,21 @@ describe("6. Image Proof Upload & Cloudinary Security", () => {
     assert.equal(claimInDb.imageProofs.length, 1);
     assert.equal(claimInDb.imageProofs[0].originalName, "ballot_box.png");
     assert.equal(claimInDb.imageProofs[0].uploadedBy.toString(), userAlphaId);
+
+    // Verify GET /api/claims/:id retrieves claim with imageProofs and report imageProofs
+    const getRes = await fetch(`http://127.0.0.1:${port}/api/claims/${createdClaimId}`, {
+      headers: { Authorization: `Bearer ${userAlphaToken}` },
+    });
+    assert.equal(getRes.status, 200);
+    const getJson = await getRes.json();
+    assert.equal(getJson.data.claim.imageProofs.length, 1);
+    assert.equal(getJson.data.claim.imageProofs[0].secureUrl, mockImageProof.secureUrl);
+    assert.equal(getJson.data.claim.imageProofs[0].publicId, mockImageProof.publicId);
+    if (getJson.data.claim.verificationReport) {
+      assert.ok(Array.isArray(getJson.data.claim.verificationReport.imageProofs));
+      assert.equal(getJson.data.claim.verificationReport.imageProofs.length, 1);
+      assert.equal(getJson.data.claim.verificationReport.imageProofs[0].secureUrl, mockImageProof.secureUrl);
+    }
   });
 
   it("5. Multi-User Isolation: User Beta CANNOT delete User Alpha's evidence image (403)", async () => {

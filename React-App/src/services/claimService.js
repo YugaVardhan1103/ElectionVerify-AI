@@ -428,10 +428,18 @@ export async function getVerificationReport(claimId) {
     claim.status === CLAIM_STATUS.UNDER_REVIEW ||
     claim.status === CLAIM_STATUS.IN_VERIFICATION;
 
+  const report = claim.verificationReport || null;
+  if (report && (!report.imageProofs || report.imageProofs.length === 0)) {
+    report.imageProofs = claim.imageProofs || [];
+  }
+  if ((!claim.imageProofs || claim.imageProofs.length === 0) && report?.imageProofs?.length > 0) {
+    claim.imageProofs = report.imageProofs;
+  }
+
   return {
     success: true,
     claim,
-    report: claim.verificationReport || null,
+    report,
     isUnderReview,
   };
 }

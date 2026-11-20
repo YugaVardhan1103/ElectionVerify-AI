@@ -46,14 +46,14 @@ export class ClaimService {
 
     const sanitizedProofs = Array.isArray(imageProofs)
       ? imageProofs.slice(0, 5).map((img) => ({
-          url: img.url || img.secureUrl,
-          secureUrl: img.secureUrl || img.url,
-          publicId: img.publicId,
+          url: img.url || img.secureUrl || img.secure_url || "",
+          secureUrl: img.secureUrl || img.secure_url || img.url || "",
+          publicId: img.publicId || img.public_id || "",
           format: img.format || "",
           width: img.width || 0,
           height: img.height || 0,
           bytes: img.bytes || 0,
-          originalName: img.originalName || "",
+          originalName: img.originalName || img.original_name || img.original_filename || "",
           uploadedBy: validUserId,
           createdAt: img.createdAt || new Date(),
         }))
@@ -217,6 +217,15 @@ export class ClaimService {
     if (!claim) return null;
 
     claim.id = claim._id ? claim._id.toString() : claim.id;
+
+    if (claim.verificationReport && typeof claim.verificationReport === "object") {
+      claim.verificationReport.id = claim.verificationReport._id
+        ? claim.verificationReport._id.toString()
+        : claim.verificationReport.id;
+      if (!claim.verificationReport.imageProofs || claim.verificationReport.imageProofs.length === 0) {
+        claim.verificationReport.imageProofs = claim.imageProofs || [];
+      }
+    }
 
     // Multi-user ownership & visibility enforcement
     const isPublic = claim.isPublic === true;
