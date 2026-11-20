@@ -722,4 +722,28 @@ export const claimsApi = {
       error: res.error || "Failed to submit claim.",
     };
   },
+
+  async triggerVerification(claimId: string): Promise<{ success: boolean; data?: any; error?: string }> {
+    if (!claimId) return { success: false, error: "Claim ID is required." };
+    return request(`/verification/claims/${claimId}/verify`, {
+      method: "POST",
+    });
+  },
+
+  async submitHumanReview(params: {
+    claimId: string;
+    decision: string;
+    verdictId?: string;
+    notes?: string;
+  }): Promise<{ success: boolean; data?: any; error?: string }> {
+    if (!params.claimId) return { success: false, error: "Claim ID is required." };
+    return request(`/verification/claims/${params.claimId}/review`, {
+      method: "POST",
+      body: JSON.stringify({
+        decision: params.decision,
+        verdictId: params.verdictId,
+        notes: params.notes || "",
+      }),
+    });
+  },
 };

@@ -75,6 +75,8 @@ export interface EvidenceSource {
   retrievalDate?: string;
   snippet?: string;
   domainTrust?: string;
+  domain?: string;
+  domainClassification?: string;
   reliabilityScore?: number | null;
 }
 
@@ -83,6 +85,9 @@ export interface VerificationReportData {
   id?: string;
   claim?: string;
   verdictId: CanonicalVerdictId;
+  originalAiVerdictId?: CanonicalVerdictId;
+  finalVerdictId?: CanonicalVerdictId;
+  reviewStatus?: string;
   summary: string;
   assessment: string;
   evidenceAssessment?: string;
@@ -98,7 +103,9 @@ export interface VerificationReportData {
   };
   humanReview?: {
     isReviewed: boolean;
+    decision?: string;
     reviewer?: string | null;
+    reviewerName?: string | null;
     notes?: string;
     reviewedAt?: string | null;
   };
