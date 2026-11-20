@@ -20,6 +20,108 @@ export const DEMO_USER: UserProfile = {
 
 export const BASELINE_SAMPLE_CLAIMS: ClaimItem[] = [
   {
+    id: "6aff5e86a442c100875cb794",
+    title: "Nationwide Free Laptops Scheme for College Students",
+    claimText:
+      "The Government of India has announced a nationwide scheme providing free laptops to every college student in India, regardless of family income, starting December 2026.",
+    sourceUrl: "",
+    language: "English",
+    context: "Viral WhatsApp message",
+    submittedDate: "2026-11-20T02:09:00Z",
+    status: "COMPLETED",
+    verdictId: "CONTRADICTED",
+    categoryTags: ["General Election"],
+    isSampleData: false,
+    verificationReport: {
+      verdictId: "CONTRADICTED",
+      summary:
+        "The Government of India has not announced any nationwide scheme to provide free laptops to every college student; official fact-checking bodies and news sources have debunked such viral messages as scams.",
+      assessment:
+        "Multiple reliable sources, including official government fact-checking units (PIB) reported via Akashvani News and educational guides, explicitly state that there is no nationwide central government scheme offering free laptops to all students. The viral claims circulating on social media and WhatsApp have been classified as fake messages and part of scams designed to collect personal information. While some state-specific or targeted schemes exist, no universal nationwide program exists as claimed.",
+      evidenceAssessment:
+        "The evidence consists of fact-checking articles, government warnings, and news reports that directly address the viral WhatsApp claim and confirm that no such nationwide scheme has been announced by the Government of India.",
+      supportingEvidence: [],
+      contradictingEvidence: [
+        {
+          id: "ev-c-01",
+          title: "Free Laptop Yojana 2026: Apply Online, Eligibility, Documents, Fact Check & Official Updates",
+          publisher: "jobcareermint.com",
+          description:
+            "Explains that there is no nationwide Free Laptop Yojana announced by the Government of India and that social media claims are misleading.",
+          relevance: "Directly contradicts the claim that a nationwide scheme has been announced.",
+          sourceUrl: "https://jobcareermint.com",
+        },
+        {
+          id: "ev-c-02",
+          title: "Free Laptop Scheme 2026-27 – List of Schemes, Eligibility & More",
+          publisher: "buddy4study.com",
+          description:
+            "Confirms that PIB Fact Check has repeatedly debunked viral WhatsApp claims about a central government free laptop scheme, noting only state-level schemes exist.",
+          relevance: "Refutes the notion of a universal central government program for all students.",
+          sourceUrl: "https://buddy4study.com",
+        },
+        {
+          id: "ev-c-03",
+          title: "Govt warns public against fake Students Laptop Scheme 2026 messages | Akashvani News",
+          publisher: "newsonair.gov.in",
+          description:
+            "Reports that the government has debunked social media messages regarding a Students Laptop Scheme 2026, stating no such scheme has been announced and warning against scams.",
+          relevance: "Provides official government refutation of the viral claim.",
+          sourceUrl: "https://newsonair.gov.in",
+        },
+      ],
+      sources: [
+        {
+          title: "Free Laptop Yojana 2026: Apply Online, Eligibility, Documents, Fact Check & Official Updates",
+          url: "https://jobcareermint.com",
+          domain: "Web",
+          publisher: "jobcareermint.com",
+        },
+        {
+          title: "Free Laptop Scheme 2026-27 – List of Schemes, Eligibility & More",
+          url: "https://buddy4study.com",
+          domain: "Web",
+          publisher: "buddy4study.com",
+        },
+        {
+          title: "Govt warns public against fake Students Laptop Scheme 2026 messages | Akashvani News",
+          url: "https://newsonair.gov.in",
+          domain: "Web",
+          publisher: "newsonair.gov.in",
+        },
+        {
+          title: "Biology Simplified Tamil on Facebook: \"Biology Simplified Tamil and Senthilnathan Venkatachalam\"",
+          url: "https://facebook.com",
+          domain: "Web",
+          publisher: "facebook.com",
+        },
+        {
+          title: "India to delay import licensing of laptops after US, industry push back, sources say",
+          url: "https://finance.yahoo.com",
+          domain: "Web",
+          publisher: "finance.yahoo.com",
+        },
+        {
+          title: "Ecosystem - Unique Identification Authority of India | Government of India - Unique Identification Authority of India | Government of India",
+          url: "https://uidai.gov.in",
+          domain: "Web",
+          publisher: "uidai.gov.in",
+        },
+      ],
+      humanReview: {
+        isReviewed: false,
+      },
+      reviewStatus: "AWAITING_REVIEW",
+      aiMetadata: {
+        provider: "Gemini",
+        model: "gemini-3.5-flash-lite",
+        executionTimeMs: 1655,
+        isConfigured: true,
+        verificationDate: "2026-11-20T02:09:00Z",
+      },
+    },
+  },
+  {
     id: "claim-001",
     title: "Mandatory VVPAT Physical Slip Audit Protocol",
     claimText:

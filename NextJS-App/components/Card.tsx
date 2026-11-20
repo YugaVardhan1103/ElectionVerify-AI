@@ -25,9 +25,14 @@ export function Card({
     ? "transition-shadow duration-200 hover:shadow-md"
     : "";
 
+  const hasCustomBorderColor = /border-(rose|emerald|amber|orange|slate|blue|brand|red|green)/.test(
+    className
+  );
+  const borderClass = hasCustomBorderColor ? "" : "border-border";
+
   return (
     <Component
-      className={`rounded-xl border border-border bg-surface ${paddings[padding]} shadow-sm ${hoverStyles} ${className}`}
+      className={`rounded-xl border ${borderClass} bg-surface ${paddings[padding]} shadow-sm ${hoverStyles} ${className}`}
       {...rest}
     >
       {children}

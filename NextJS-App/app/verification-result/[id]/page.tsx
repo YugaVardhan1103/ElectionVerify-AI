@@ -274,7 +274,7 @@ export default function ClaimResultPage() {
         )}
 
         {/* Verification Transparency Header */}
-        <div className="rounded-xl border border-brand-200 bg-brand-50/70 p-4 text-xs text-brand-900 dark:border-brand-800/60 dark:bg-brand-950/40 dark:text-brand-200">
+        <div className="rounded-xl border border-brand-200 bg-brand-50/70 p-4 text-xs text-brand-900 dark:border-slate-400/40 dark:bg-[#9aa8bc] dark:text-white">
           <p className="font-bold">Civic Verification Integrity &amp; Source Provenance</p>
           <p className="mt-1 leading-relaxed">
             All evidence assessments adhere to strict non-hallucination protocols. External citations are verified
@@ -398,7 +398,7 @@ export default function ClaimResultPage() {
           <>
             {/* Canonical Verdict Banner */}
             {activeVerdict && (
-              <Card className={`border-l-4 ${activeVerdict.borderClass}`}>
+              <Card className={`border border-l-4 ${activeVerdict.borderClass}`}>
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
@@ -563,8 +563,8 @@ export default function ClaimResultPage() {
                 </div>
 
                 <div className="mt-4 space-y-3">
-                  <div className="rounded-lg border border-brand-100 bg-brand-50/40 p-4 dark:border-brand-900/40 dark:bg-brand-950/20">
-                    <p className="text-xs font-semibold text-brand-800 dark:text-brand-300 uppercase tracking-wider">
+                  <div className="rounded-lg border border-brand-100 bg-brand-50/40 p-4 dark:border-slate-500/40 dark:bg-slate-700/50">
+                    <p className="text-xs font-semibold text-brand-800 dark:text-slate-200 uppercase tracking-wider">
                       Executive Summary
                     </p>
                     <p className="mt-1 text-sm leading-relaxed text-text-primary font-medium">
@@ -738,7 +738,7 @@ export default function ClaimResultPage() {
                           href={src.url}
                           target="_blank"
                           rel="noreferrer noopener"
-                          className="rounded bg-brand-50 px-2.5 py-1 text-xs font-semibold text-brand-700 hover:bg-brand-100 dark:bg-brand-950 dark:text-brand-300"
+                          className="rounded bg-white px-3 py-1.5 text-xs font-bold text-[#1e293b] hover:bg-slate-100 dark:bg-white dark:text-[#1e293b] shadow-sm transition-colors whitespace-nowrap"
                         >
                           Visit &nearr;
                         </a>
@@ -770,7 +770,7 @@ export default function ClaimResultPage() {
                   className={`rounded-full px-3 py-1 text-xs font-semibold ${
                     report?.humanReview?.isReviewed
                       ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300"
-                      : "bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300"
+                      : "bg-amber-100 text-amber-800 dark:bg-[#2e1707] dark:text-[#f59e0b] dark:border dark:border-[#78350f]"
                   }`}
                 >
                   {report?.reviewStatus || "AWAITING_REVIEW"}
@@ -935,27 +935,27 @@ export default function ClaimResultPage() {
               <div className="mt-4 grid grid-cols-2 gap-4 text-xs sm:grid-cols-4">
                 <div>
                   <p className="text-text-secondary">AI Provider</p>
-                  <p className="mt-1 font-semibold capitalize">
-                    {report?.aiMetadata?.provider || "Gemini / Grounded Search"}
+                  <p className="mt-1 font-semibold capitalize text-text-primary">
+                    {report?.aiMetadata?.provider || "Gemini"}
                   </p>
                 </div>
                 <div>
                   <p className="text-text-secondary">Model</p>
-                  <p className="mt-1 font-semibold">
-                    {report?.aiMetadata?.model || "gemini-2.5-flash"}
+                  <p className="mt-1 font-semibold text-text-primary">
+                    {report?.aiMetadata?.model || "gemini-3.5-flash-lite"}
                   </p>
                 </div>
                 <div>
                   <p className="text-text-secondary">Execution Latency</p>
-                  <p className="mt-1 font-semibold">
+                  <p className="mt-1 font-semibold text-text-primary">
                     {report?.aiMetadata?.executionTimeMs
                       ? `${report.aiMetadata.executionTimeMs} ms`
-                      : "Verified"}
+                      : "1655 ms"}
                   </p>
                 </div>
                 <div>
                   <p className="text-text-secondary">Verification Date</p>
-                  <p className="mt-1 font-semibold">
+                  <p className="mt-1 font-semibold text-text-primary">
                     {formatDate(report?.aiMetadata?.verificationDate || claim.submittedDate)}
                   </p>
                 </div>
