@@ -1,0 +1,138 @@
+// ==============================================================================
+// ElectionVerify AI - Next.js Prisma Schema (MongoDB Provider)
+// Database: electionverify_nextjs
+// ==============================================================================
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ------------------------------------------------------------------------------
+// User Model & Account Preferences
+// ------------------------------------------------------------------------------
+model User {
+  id            String           @id @default(auto()) @map("_id") @db.ObjectId
+  name          String
+  email         String           @unique
+  password      String?
+  role          String           @default("user")
+  accountStatus String           @default("Active")
+  avatarUrl     String?
+  authProvider  String           @default("local")
+  providerId    String?
+  preferences   UserPreferences?
+  savedClaims   String[]         @default([])
+  claims        Claim[]
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  @@map("users")
+}
+
+type UserPreferences {
+  preferredLanguage String         @default("English")
+  theme             String         @default("System")
+  notifications     Notifications?
+}
+
+type Notifications {
+  emailNotifications        Boolean @default(true)
+  resultNotifications       Boolean @default(true)
+  announcementNotifications Boolean @default(false)
+}
+
+// ------------------------------------------------------------------------------
+// Election Claim Model
+// ------------------------------------------------------------------------------
+model Claim {
+  id                 String              @id @default(auto()) @map("_id") @db.ObjectId
+  title              String
+  claimText          String
+  sourceUrl          String?             @default("")
+  language           String              @default("English")
+  context            String?             @default("")
+  submittedBy        String?             @db.ObjectId
+  user               User?               @relation(fields: [submittedBy], references: [id])
+  submittedDate      DateTime            @default(now())
+  status             String              @default("UNDER_REVIEW")
+  verdictId          String?
+  reviewStatus       String              @default("AWAITING_REVIEW")
+  categoryTags       String[]            @default(["General Election"])
+  isPublic           Boolean             @default(false)
+  verificationReport VerificationReport?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+
+  @@map("claims")
+}
+
+// ------------------------------------------------------------------------------
+// Verification Report Model & Evidence Embeds
+// ------------------------------------------------------------------------------
+model VerificationReport {
+  id                    String           @id @default(auto()) @map("_id") @db.ObjectId
+  claimId               String           @unique @db.ObjectId
+  claim                 Claim            @relation(fields: [claimId], references: [id], onDelete: Cascade)
+  verdictId             String
+  originalAiVerdictId   String?
+  finalVerdictId        String?
+  reviewStatus          String           @default("AWAITING_REVIEW")
+  summary               String
+  assessment            String
+  evidenceAssessment    String?          @default("")
+  supportingEvidence    EvidenceItem[]
+  contradictingEvidence EvidenceItem[]
+  sources               EvidenceSource[]
+  aiMetadata            AiMetadata?
+  humanReview           HumanReview?
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
+
+  @@map("verification_reports")
+}
+
+type EvidenceItem {
+  title           String
+  description     String
+  sourceUrl       String?   @default("")
+  publisher       String?   @default("")
+  publicationDate DateTime?
+  relevance       String?   @default("")
+}
+
+type EvidenceSource {
+  url              String
+  title            String?
+  publisher        String?
+  publicationDate  DateTime?
+  retrievalDate    DateTime?
+  snippet          String?
+  domainTrust      String?
+  reliabilityScore Float?
+}
+
+type AiMetadata {
+  provider         String   @default("none")
+  model            String   @default("none")
+  executionTimeMs  Int      @default(0)
+  promptTokens     Int      @default(0)
+  completionTokens Int      @default(0)
+  totalTokens      Int      @default(0)
+  isConfigured     Boolean  @default(false)
+  verificationDate DateTime @default(now())
+}
+
+type HumanReview {
+  isReviewed       Boolean   @default(false)
+  decision         String    @default("AWAITING_REVIEW")
+  reviewerId       String?   @db.ObjectId
+  reviewerName     String?   @default("")
+  revisedVerdictId String?
+  notes            String?   @default("")
+  reviewedAt       DateTime?
+}
