@@ -117,6 +117,15 @@ export class ClaimService {
       queryOptions.mine === true ||
       queryOptions.scope === "user";
 
+    const userIds = currentUser ? [currentUser._id] : [];
+    if (
+      currentUser?.id &&
+      currentUser.id !== currentUser._id?.toString() &&
+      mongoose.isValidObjectId(currentUser.id)
+    ) {
+      userIds.push(new mongoose.Types.ObjectId(currentUser.id));
+    }
+
     if (isMineOnly) {
       // User-specific history: strictly authenticated user's records
       if (!currentUser) {
@@ -132,7 +141,7 @@ export class ClaimService {
           },
         };
       }
-      conditions.push({ submittedBy: currentUser._id });
+      conditions.push({ submittedBy: { $in: userIds } });
     } else if (currentUser && (currentUser.role === "admin" || currentUser.role === "reviewer")) {
       // Authorized Reviewer / Admin view: can inspect all submissions, or filter by specific submitter
       if (queryOptions.submittedBy && mongoose.isValidObjectId(queryOptions.submittedBy)) {
@@ -141,13 +150,13 @@ export class ClaimService {
     } else if (currentUser) {
       // Regular Authenticated User: public registry claims + their own private submissions ONLY
       // Prevent IDOR: if client attempts ?submittedBy=<other_user_id>, enforce ownership
-      if (queryOptions.submittedBy && queryOptions.submittedBy !== currentUser._id.toString()) {
-        conditions.push({ submittedBy: currentUser._id });
+      if (queryOptions.submittedBy && !userIds.some((uid) => uid.toString() === queryOptions.submittedBy)) {
+        conditions.push({ submittedBy: { $in: userIds } });
       } else {
         conditions.push({
           $or: [
             { isPublic: true },
-            { submittedBy: currentUser._id },
+            { submittedBy: { $in: userIds } },
           ],
         });
       }
@@ -217,10 +226,12 @@ export class ClaimService {
     const isOwner =
       currentUser &&
       claim.submittedBy &&
-      claim.submittedBy.toString() === currentUser._id.toString();
+      (claim.submittedBy.toString() === currentUser._id?.toString() ||
+       claim.submittedBy.toString() === currentUser.id?.toString());
+    const isUnclaimedOrGuest = !claim.submittedBy;
 
     // Prevent IDOR: private claims are inaccessible to other users / guests
-    if (!isPublic && !isPrivileged && !isOwner) {
+    if (!isPublic && !isPrivileged && !isOwner && !isUnclaimedOrGuest) {
       return null; // Controller returns 404 to hide resource existence
     }
 

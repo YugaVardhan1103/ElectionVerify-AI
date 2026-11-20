@@ -1,27 +1,58 @@
-import React from "react";
+"use client";
+
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { useParams } from "next/navigation";
 import Card from "@/components/Card";
 import VerdictBadge from "@/components/VerdictBadge";
 import StatusBadge from "@/components/StatusBadge";
+import Button from "@/components/Button";
 import { claimsApi } from "@/lib/api";
 import { getVerdictById } from "@/constants/verdicts";
+import { ClaimItem } from "@/types";
 
-interface PageProps {
-  params: Promise<{ id: string }>;
-}
+export default function ClaimResultPage() {
+  const params = useParams();
+  const rawId = params?.id;
+  const id = Array.isArray(rawId) ? rawId[0] : (rawId as string);
 
-export default async function ClaimResultPage({ params }: PageProps) {
-  const { id } = await params;
-  const claim = await claimsApi.getClaimById(id);
+  const [claim, setClaim] = useState<ClaimItem | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  if (!claim) {
-    notFound();
-  }
+  useEffect(() => {
+    let isMounted = true;
+    if (!id) return;
 
-  const report = claim.verificationReport;
-  const verdict = claim.verdictId ? getVerdictById(claim.verdictId) : null;
-  const isUnderReview = claim.status === "UNDER_REVIEW";
+    async function fetchClaim() {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const data = await claimsApi.getClaimById(id);
+        if (isMounted) {
+          if (data) {
+            setClaim(data);
+          } else {
+            setError("Claim record not found.");
+          }
+        }
+      } catch (err) {
+        if (isMounted) {
+          console.error("Failed to fetch claim:", err);
+          setError("Failed to load claim record.");
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    }
+
+    fetchClaim();
+    return () => {
+      isMounted = false;
+    };
+  }, [id]);
 
   function formatDate(isoString: string) {
     if (!isoString) return "N/A";
@@ -35,6 +66,88 @@ export default async function ClaimResultPage({ params }: PageProps) {
       minute: "2-digit",
     });
   }
+
+  if (isLoading) {
+    return (
+      <main className="min-h-screen bg-background px-6 py-10">
+        <div className="mx-auto max-w-5xl space-y-6">
+          <div className="flex items-center justify-between">
+            <Link
+              href="/verification-history"
+              className="text-xs font-semibold text-brand-600 hover:text-brand-700 dark:text-brand-400"
+            >
+              &larr; Back to Verification History
+            </Link>
+          </div>
+          <Card className="flex flex-col items-center justify-center py-16 text-center">
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-brand-500 border-t-transparent" />
+            <p className="mt-4 text-sm font-medium text-text-primary">
+              Retrieving verification report...
+            </p>
+            <p className="mt-1 text-xs text-text-secondary">
+              Querying election evidence database and verifying records.
+            </p>
+          </Card>
+        </div>
+      </main>
+    );
+  }
+
+  if (error || !claim) {
+    return (
+      <main className="min-h-screen bg-background px-6 py-10">
+        <div className="mx-auto max-w-5xl space-y-6">
+          <div className="flex items-center justify-between">
+            <Link
+              href="/verification-history"
+              className="text-xs font-semibold text-brand-600 hover:text-brand-700 dark:text-brand-400"
+            >
+              &larr; Back to Verification History
+            </Link>
+          </div>
+          <Card className="flex flex-col items-center justify-center py-16 text-center">
+            <div className="rounded-full bg-rose-100 p-3 text-rose-600 dark:bg-rose-950/60 dark:text-rose-400">
+              <svg
+                className="h-8 w-8"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={1.5}
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"
+                />
+              </svg>
+            </div>
+            <h1 className="mt-4 text-xl font-bold text-text-primary">
+              {error || "Claim record not found"}
+            </h1>
+            <p className="mt-2 max-w-md text-xs text-text-secondary">
+              The requested claim ID (<code className="font-mono text-brand-600">{id}</code>) could not be located in the verification registry, or access is restricted.
+            </p>
+            <div className="mt-6 flex gap-3">
+              <Link href="/verification-history">
+                <Button size="sm" variant="secondary">
+                  Verification History
+                </Button>
+              </Link>
+              <Link href="/submit-claim">
+                <Button size="sm" variant="primary">
+                  Submit New Claim
+                </Button>
+              </Link>
+            </div>
+          </Card>
+        </div>
+      </main>
+    );
+  }
+
+  const report = claim.verificationReport;
+  const verdict = claim.verdictId ? getVerdictById(claim.verdictId) : null;
+  const isUnderReview = claim.status === "UNDER_REVIEW";
 
   return (
     <main className="min-h-screen bg-background px-6 py-10">

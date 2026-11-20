@@ -666,7 +666,14 @@ export const claimsApi = {
     });
 
     if (res.success && res.data) {
-      return { success: true, claim: res.data.claim };
+      const user = getStoredUser();
+      const userId = user ? user.id || user.email : "guest";
+      const formatted = {
+        ...res.data.claim,
+        id: (res.data.claim as any).id || (res.data.claim as any)._id,
+      };
+      saveUserClaim(userId, formatted);
+      return { success: true, claim: formatted };
     }
 
     if (res.isOffline) {

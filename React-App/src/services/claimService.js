@@ -184,9 +184,13 @@ export async function submitClaim({
 
   if (res.success && res.data?.claim) {
     const created = res.data.claim;
+    const user = getStoredUser();
+    const userId = user ? user.id || user.email : "guest";
+    const formatted = { ...created, id: created._id || created.id };
+    saveUserClaim(userId, formatted);
     return {
       success: true,
-      claim: { ...created, id: created._id || created.id },
+      claim: formatted,
       message: res.data.message || "Claim submitted successfully for verification.",
     };
   }
